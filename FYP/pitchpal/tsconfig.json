@@ -5,13 +5,18 @@
     "paths": {
       "@/*": [
         "./*"
-      ]
-    }
+      ],
+    },
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"  // Include custom types directory
+    ]
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "src/types/**/*.d.ts"  // Include the custom types folder
   ]
 }
