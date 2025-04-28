@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, Button, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Define the props type for AddStartupForm
 interface AddStartupFormProps {
@@ -64,23 +65,44 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
   const [showIndustryModal, setShowIndustryModal] = useState(false);
   const [showStageModal, setShowStageModal] = useState(false);
 
-  const handleSubmit = () => {
-    onAddStartup({
+  const handleSubmit = async () => {
+    const startupData = {
       name: startupName,
       category,
-      totalFunding,
-      fundingRounds,
-      locationCity,
-      locationCountry,
-      foundedDate,
-      teamSize,
-      revenue,
-      stageOfBusiness,
+      funding_total_usd: totalFunding,
+      funding_rounds: fundingRounds,
+      continent: selectedContinent,
+      country: locationCountry,
+      stage_of_business: stageOfBusiness,
       industry,
+      team_size: teamSize,
+      revenue_usd: revenue,
       minInvestment: minInvestment.toString(),
       maxInvestment: maxInvestment.toString(),
-    });
-    onClose();
+    };
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/startups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify(startupData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const createdStartup = await response.json();
+      onAddStartup(createdStartup);
+      onClose();
+    } catch (error) {
+      console.error('Failed to create startup:', error);
+      alert('Failed to create startup. Please try again.');
+    }
   };
 
   const handleSelection = (item: string, type: 'industry' | 'stage' | 'location') => {

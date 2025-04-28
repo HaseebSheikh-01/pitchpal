@@ -12,11 +12,14 @@ interface Startup {
   locationCity: string;
   locationCountry: string;
   foundedDate: string;
-  firstFundingDate: string;
-  lastFundingDate: string;
+  firstFundingDate?: string;
+  lastFundingDate?: string;
   teamSize: string;
   revenue: string;
   stageOfBusiness: string;
+  industry: string;
+  minInvestment: string;
+  maxInvestment: string;
 }
 
 export default function StartupDashboard() {
@@ -57,15 +60,18 @@ export default function StartupDashboard() {
       {/* Snackbar for success message */}
       <Snackbar
         visible={snackbarVisible}
-        message="Startup added successfully!"
         duration={2000}
         onDismiss={() => setSnackbarVisible(false)}
-      />
+      >
+        Startup added successfully!
+      </Snackbar>
     </View>
   );
 }
 
-const styles = {
+import { StyleSheet } from 'react-native';
+
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
@@ -97,4 +103,4 @@ const styles = {
     fontSize: 18,
     fontWeight: 'bold', // Ensured proper fontWeight (string value)
   },
-};
+});
