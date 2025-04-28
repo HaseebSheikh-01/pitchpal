@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, Snackbar } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
+import { Snackbar } from "react-native-paper";
 import React, { useState } from 'react';
 import AddStartupForm from './AddStartupForm';
 
