@@ -4,9 +4,24 @@ import { Modal, View, Text, TextInput, Button, StyleSheet } from 'react-native';
 interface AddStartupFormProps {
   visible: boolean;
   onClose: () => void;
+  onAddStartup: (startup: {
+    name: string;
+    category: string;
+    totalFunding: string;
+    fundingRounds: string;
+    locationCity: string;
+    locationCountry: string;
+    foundedDate: string;
+    firstFundingDate: string;
+    lastFundingDate: string;
+    teamSize: string;
+    revenue: string;
+    stageOfBusiness: string;
+    industry: string;
+  }) => void;
 }
 
-const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose }) => {
+const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAddStartup }) => {
   const [startupName, setStartupName] = useState('');
   const [category, setCategory] = useState('');
   const [totalFunding, setTotalFunding] = useState('');
@@ -19,11 +34,12 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose }) => 
   const [teamSize, setTeamSize] = useState('');
   const [revenue, setRevenue] = useState('');
   const [stageOfBusiness, setStageOfBusiness] = useState('');
+  const [industry, setIndustry] = useState('');
 
   const handleSubmit = () => {
-    // Handle form submission logic here
-    console.log({
-      startupName,
+    // Send the form data to the parent (StartupDashboard)
+    onAddStartup({
+      name: startupName,
       category,
       totalFunding,
       fundingRounds,
@@ -35,23 +51,9 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose }) => 
       teamSize,
       revenue,
       stageOfBusiness,
+      industry,
     });
-    
-    // Clear all fields after submission
-    setStartupName('');
-    setCategory('');
-    setTotalFunding('');
-    setFundingRounds('');
-    setLocationCity('');
-    setLocationCountry('');
-    setFoundedDate('');
-    setFirstFundingDate('');
-    setLastFundingDate('');
-    setTeamSize('');
-    setRevenue('');
-    setStageOfBusiness('');
-
-    onClose(); // Close the modal after submission
+    onClose(); // Close the modal after submitting the form
   };
 
   return (
@@ -70,6 +72,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose }) => 
         <TextInput placeholder="Team Size" value={teamSize} onChangeText={setTeamSize} style={styles.input} />
         <TextInput placeholder="Revenue" value={revenue} onChangeText={setRevenue} style={styles.input} />
         <TextInput placeholder="Stage of Business" value={stageOfBusiness} onChangeText={setStageOfBusiness} style={styles.input} />
+        <TextInput placeholder="Industry" value={industry} onChangeText={setIndustry} style={styles.input} />
         <Button title="Submit" onPress={handleSubmit} color="#4CAF50" />
         <Button title="Cancel" onPress={onClose} color="#4CAF50" />
       </View>

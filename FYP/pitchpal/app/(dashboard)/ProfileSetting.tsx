@@ -11,6 +11,12 @@ const industries = [
   'Education',
   'Energy',
   'Retail',
+  'Manufacturing',
+  'Real Estate',
+  'AI & Machine Learning',
+  'E-commerce',
+  'Blockchain',
+  'Biotech'
 ];
 
 const areas = [
