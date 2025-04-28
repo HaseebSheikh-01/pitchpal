@@ -64,12 +64,19 @@ export default function StartupDashboard() {
 
       <AddStartupForm visible={isModalVisible} onClose={() => setModalVisible(false)} onAddStartup={addStartup} />
 
-      <Snackbar visible={snackbarVisible} duration={2000} onDismiss={() => setSnackbarVisible(false)}>
+      {/* Snackbar for success message */}
+      <Snackbar
+        visible={snackbarVisible}
+        duration={2000}
+        onDismiss={() => setSnackbarVisible(false)}
+      >
         Startup added successfully!
       </Snackbar>
     </View>
   );
 }
+
+import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {

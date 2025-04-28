@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Replace with the actual endpoint for your backend API
-const API_URL = 'https://your-backend-api.com/submit-profile';
+const API_URL = 'http://localhost:5000/api/investors';
 
 const industries = [
   'Technology',
@@ -116,24 +116,24 @@ export default function ProfileSetting() {
     }
 
     const profileData = {
-      name,
-      email,
+      full_name: name,
+      email: email,
       company,
       position,
-      investmentRange: {
-        min: minVal,
-        max: maxVal,
-      },
-      industries: selectedIndustries,
-      areas: selectedAreas,
-      startupTypes: selectedStartupTypes,
+      funding_min: minVal,
+      funding_max: maxVal,
+      industry: selectedIndustries,
+      area: selectedAreas,
+      type_of_startup: selectedStartupTypes,
     };
 
     try {
+      const token = await AsyncStorage.getItem('token');
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : '',
         },
         body: JSON.stringify(profileData),
       });
@@ -145,11 +145,9 @@ export default function ProfileSetting() {
       const data = await response.json();
       Alert.alert("Profile Submitted", data.message || "Your profile has been successfully submitted.");
     } catch (error: unknown) {
-      // Type casting 'error' to Error type
       if (error instanceof Error) {
         Alert.alert("Error", error.message || "There was an error submitting your profile.");
       } else {
-        // If error is not of type 'Error', provide a default error message
         Alert.alert("Error", "An unexpected error occurred.");
       }
     }
