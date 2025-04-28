@@ -1,9 +1,9 @@
-import { View, Text, TouchableOpacity } from "react-native";
-import { Snackbar } from "react-native-paper";
 import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { Snackbar } from 'react-native-paper';
 import AddStartupForm from './AddStartupForm';
 
-// Define a TypeScript interface for the startup
+// Define TypeScript interface
 interface Startup {
   name: string;
   category: string;
@@ -12,8 +12,6 @@ interface Startup {
   locationCity: string;
   locationCountry: string;
   foundedDate: string;
-  firstFundingDate?: string;
-  lastFundingDate?: string;
   teamSize: string;
   revenue: string;
   stageOfBusiness: string;
@@ -24,37 +22,46 @@ interface Startup {
 
 export default function StartupDashboard() {
   const [isModalVisible, setModalVisible] = useState(false);
-  const [startups, setStartups] = useState<Startup[]>([]); // State to hold the list of startups
+  const [startups, setStartups] = useState<Startup[]>([]);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
 
   const addStartup = (startup: Startup) => {
-    // Use functional state update to avoid issues with stale closures
-    setStartups((prevStartups) => [...prevStartups, startup]);
-    setModalVisible(false); // Close the form modal after adding
-    setSnackbarVisible(true); // Show success message
-    setTimeout(() => setSnackbarVisible(false), 2000); // Hide after 2 seconds
+    setStartups((prev) => [...prev, startup]);
+    setModalVisible(false);
+    setSnackbarVisible(true);
+    setTimeout(() => setSnackbarVisible(false), 2000);
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Startup Dashboard</Text>
-      <Text style={styles.welcomeText}>Welcome, Startup! Here you can manage your profile and connect with investors.</Text>
+      <Text style={styles.welcomeText}>
+        Welcome to your startup dashboard! Here you can manage your startup profiles and connect with investors.
+      </Text>
 
-      <TouchableOpacity 
-        style={styles.addButton} 
-        onPress={() => setModalVisible(true)}
-      >
+      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
         <Text style={styles.buttonText}>Add Startup</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles.addButton} 
-        onPress={() => {/* Handle update startup logic */}}
-      >
+      <TouchableOpacity style={styles.updateButton} onPress={() => {}}>
         <Text style={styles.buttonText}>Update Startup</Text>
       </TouchableOpacity>
 
-      {/* Add Startup Form Modal */}
+      {startups.length === 0 ? (
+        <Text style={styles.emptyState}>No startups added yet. Tap "Add Startup" to get started.</Text>
+      ) : (
+        <ScrollView style={{ marginTop: 20 }}>
+          {startups.map((startup, index) => (
+            <View key={index} style={styles.card}>
+              <Text style={styles.cardTitle}>{startup.name}</Text>
+              <Text style={styles.cardText}>Category: {startup.category}</Text>
+              <Text style={styles.cardText}>Funding: {startup.totalFunding}</Text>
+              <Text style={styles.cardText}>Location: {startup.locationCity}, {startup.locationCountry}</Text>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+
       <AddStartupForm visible={isModalVisible} onClose={() => setModalVisible(false)} onAddStartup={addStartup} />
 
       {/* Snackbar for success message */}
@@ -75,32 +82,74 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#121212',
+    backgroundColor: '#2A2A2A',
   },
   title: {
-    fontSize: 36, // H1 style
+    fontSize: 36,
     color: '#FFFFFF',
-    marginBottom: 20,
-    fontWeight: 'bold', // Bold text
+    marginBottom: 10,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   welcomeText: {
-    fontSize: 20,
-    color: '#1DB954', // Vibrant green color
-    marginBottom: 40, // Increased spacing
-    fontWeight: 'normal', // Unbolded text
+    fontSize: 18,
+    color: '#1DB954',
+    marginBottom: 30,
+    textAlign: 'center',
+    lineHeight: 26,
+    letterSpacing: 0.3,
   },
   addButton: {
     backgroundColor: '#4CAF50',
-    borderRadius: 12, // Adjusted the borderRadius as per your original request
-    paddingVertical: 15,
+    borderRadius: 10,
+    paddingVertical: 12,
     paddingHorizontal: 20,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     elevation: 5,
-    marginBottom: 10, // Spacing between buttons
+    marginBottom: 15,
+  },
+  updateButton: {
+    backgroundColor: '#FF9800',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    marginBottom: 20,
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: 'bold', // Ensured proper fontWeight (string value)
+    fontWeight: '700',
+  },
+  icon: {
+    marginRight: 10,
+  },
+  card: {
+    backgroundColor: '#3A3A3A',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginBottom: 5,
+  },
+  cardText: {
+    color: '#CCCCCC',
+    fontSize: 16,
+  },
+  emptyState: {
+    color: '#AAAAAA',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 30,
   },
 });
