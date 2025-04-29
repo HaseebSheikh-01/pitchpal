@@ -18,8 +18,6 @@ interface Startup {
   locationCity: string;
   locationCountry: string;
   foundedDate: string;
-  firstFundingDate?: string;
-  lastFundingDate?: string;
   teamSize: string;
   revenue: string;
   stageOfBusiness: string;
