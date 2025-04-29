@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, Animated, PanResponder, TouchableOpacity, Alert } from 'react-native';  // Added Alert here
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, Dimensions, Animated, PanResponder, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import BottomNavBar from './BottomNavBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-
+import API_IP from '../../constants/apiConfig';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
@@ -18,23 +18,66 @@ type Startup = {
   image: string;
 };
 
-const sampleStartups: Startup[] = [
-  { id: '1', name: 'Startup One', description: 'Innovative tech solutions', image: 'https://via.placeholder.com/300x200.png?text=Startup+One', industry: 'Technology', funding: '$500,000' },
-  { id: '2', name: 'Startup Two', description: 'Revolutionizing healthcare', image: 'https://via.placeholder.com/300x200.png?text=Startup+Two', industry: 'Healthcare', funding: '$1,000,000' },
-  { id: '3', name: 'Startup Three', description: 'Sustainable energy', image: 'https://via.placeholder.com/300x200.png?text=Startup+Three', industry: 'Energy', funding: '$200,000' },
-];
-
 export default function Matchingscreen() {
-  const [startups, setStartups] = useState<Startup[]>(sampleStartups);
+  const [startups, setStartups] = useState<Startup[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
-  const position = new Animated.ValueXY();
+  const position = useRef(new Animated.ValueXY()).current;
   const [showEmoji, setShowEmoji] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const fetchStartups = async () => {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setStartups(sampleStartups);
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Debug: Log all AsyncStorage keys and values
+        const keys = await AsyncStorage.getAllKeys();
+        console.log('AsyncStorage keys:', keys);
+        const stores = await AsyncStorage.multiGet(keys);
+        stores.forEach(([key, value]) => {
+          console.log(`AsyncStorage key: ${key}, value: ${value}`);
+        });
+
+        const userId = await AsyncStorage.getItem('userId');
+        const investorId = await AsyncStorage.getItem('investorId');
+        const token = await AsyncStorage.getItem('token');
+        const idToUse = investorId || userId;
+        console.log('Fetching startups for investorId/userId:', idToUse);
+        if (!idToUse) {
+          setError('User identifier not found. Please login again.');
+          setLoading(false);
+          return;
+        }
+        const url = `${API_IP}/api/investors/${idToUse}/match`;
+        console.log('Fetching from URL:', url);
+        const response = await fetch(url, {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : '',
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        // Ensure data is an array before setting state
+        if (Array.isArray(data)) {
+          setStartups(data);
+        } else if (data && Array.isArray(data.startups)) {
+          setStartups(data.startups);
+        } else {
+          console.error('Expected array but got:', data);
+          setError('Unexpected data format received from server.');
+          setStartups([]);
+        }
+      } catch (err) {
+        setError('Failed to fetch matching startups. Please try again later.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchStartups();
   }, []);
@@ -101,6 +144,23 @@ export default function Matchingscreen() {
   };
 
   const renderStartups = () => {
+    if (loading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1DB954" />
+          <Text style={styles.loadingText}>Loading startups...</Text>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      );
+    }
+
     if (startups.length === 0) {
       return (
         <View style={styles.noMoreCards}>
@@ -229,5 +289,23 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#1DB954',
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#F72585',
+    fontSize: 16,
+  },
 });
-
