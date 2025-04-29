@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Snackbar } from 'react-native-paper';
 import AddStartupForm from './AddStartupForm';
+import UpdateStartupForm from './UpdateStartupForm'; // Import UpdateStartupForm
+import { MaterialIcons } from '@expo/vector-icons'; // For the update icon
 
 // Define TypeScript interface
 interface Startup {
@@ -15,19 +17,55 @@ interface Startup {
   teamSize: string;
   revenue: string;
   stageOfBusiness: string;
-  industry: string;
+  industry: string; // Make sure industry is present in the interface
   minInvestment: string;
   maxInvestment: string;
 }
 
 export default function StartupDashboard() {
-  const [isModalVisible, setModalVisible] = useState(false);
+  const [isAddModalVisible, setAddModalVisible] = useState(false);
+  const [isUpdateModalVisible, setUpdateModalVisible] = useState(false);
+  const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null); // Store selected startup for update
   const [startups, setStartups] = useState<Startup[]>([]);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
 
+  // Function to add startup to the list
   const addStartup = (startup: Startup) => {
     setStartups((prev) => [...prev, startup]);
-    setModalVisible(false);
+    setAddModalVisible(false);
+    setSnackbarVisible(true);
+    setTimeout(() => setSnackbarVisible(false), 2000);
+  };
+
+  // Function to remove a startup
+  const removeStartup = (index: number) => {
+    Alert.alert(
+      'Confirm Removal',
+      'Are you sure you want to remove this startup?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          onPress: () => {
+            setStartups((prevStartups) => prevStartups.filter((_, idx) => idx !== index));
+          },
+          style: 'destructive',
+        },
+      ],
+      { cancelable: false }
+    );
+  };
+
+  // Function to update a startup
+  const updateStartup = (updatedStartup: Startup, index: number) => {
+    const updatedStartups = startups.map((startup, idx) =>
+      idx === index ? updatedStartup : startup
+    );
+    setStartups(updatedStartups);
+    setUpdateModalVisible(false);
     setSnackbarVisible(true);
     setTimeout(() => setSnackbarVisible(false), 2000);
   };
@@ -39,12 +77,8 @@ export default function StartupDashboard() {
         Welcome to your startup dashboard! Here you can manage your startup profiles and connect with investors.
       </Text>
 
-      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+      <TouchableOpacity style={styles.addButton} onPress={() => setAddModalVisible(true)}>
         <Text style={styles.buttonText}>Add Startup</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.updateButton} onPress={() => {}}>
-        <Text style={styles.buttonText}>Update Startup</Text>
       </TouchableOpacity>
 
       {startups.length === 0 ? (
@@ -54,29 +88,50 @@ export default function StartupDashboard() {
           {startups.map((startup, index) => (
             <View key={index} style={styles.card}>
               <Text style={styles.cardTitle}>{startup.name}</Text>
-              <Text style={styles.cardText}>Category: {startup.category}</Text>
+
+              {/* Replace category with industry */}
+              <Text style={styles.cardText}>Industry: {startup.industry}</Text>
+
               <Text style={styles.cardText}>Funding: {startup.totalFunding}</Text>
               <Text style={styles.cardText}>Location: {startup.locationCity}, {startup.locationCountry}</Text>
+
+              {/* Update Button */}
+              <TouchableOpacity
+                style={styles.updateButton}
+                onPress={() => {
+                  setSelectedStartup(startup); // Set selected startup for update
+                  setUpdateModalVisible(true); // Open the update modal
+                }}
+              >
+                <Text style={styles.buttonText}>Edit</Text>
+              </TouchableOpacity>
             </View>
           ))}
         </ScrollView>
       )}
 
-      <AddStartupForm visible={isModalVisible} onClose={() => setModalVisible(false)} onAddStartup={addStartup} />
+      {/* Add Startup Form Modal */}
+      <AddStartupForm visible={isAddModalVisible} onClose={() => setAddModalVisible(false)} onAddStartup={addStartup} />
+
+      {/* Update Startup Form Modal */}
+      {selectedStartup && (
+        <UpdateStartupForm
+          visible={isUpdateModalVisible}
+          onClose={() => setUpdateModalVisible(false)}
+          onUpdateStartup={updateStartup}
+          onDeleteStartup={removeStartup}  // Pass the delete function to the Update form
+          startup={selectedStartup}
+          startupIndex={startups.findIndex((s) => s === selectedStartup)} // Pass index of the startup to be updated
+        />
+      )}
 
       {/* Snackbar for success message */}
-      <Snackbar
-        visible={snackbarVisible}
-        duration={2000}
-        onDismiss={() => setSnackbarVisible(false)}
-      >
-        Startup added successfully!
+      <Snackbar visible={snackbarVisible} duration={2000} onDismiss={() => setSnackbarVisible(false)}>
+        Startup updated successfully!
       </Snackbar>
     </View>
   );
 }
-
-import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
@@ -92,12 +147,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   welcomeText: {
-    fontSize: 18,
-    color: '#1DB954',
+    fontSize: 16, // Slightly smaller for a minimal look
+    color: '#B2B2B2', // Soft neutral gray
     marginBottom: 30,
     textAlign: 'center',
-    lineHeight: 26,
-    letterSpacing: 0.3,
+    lineHeight: 28, // A bit more line height for a more spacious feel
+    letterSpacing: 0.5, // Add some spacing for readability and elegance
+    fontWeight: '300', // Light font weight for a softer appearance
+    textTransform: 'none', // Keeping it normal case for a sleek aesthetic
   },
   addButton: {
     backgroundColor: '#4CAF50',
@@ -126,15 +183,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
-  icon: {
-    marginRight: 10,
-  },
   card: {
     backgroundColor: '#3A3A3A',
     padding: 15,
     borderRadius: 10,
     marginBottom: 15,
     elevation: 3,
+    position: 'relative',
   },
   cardTitle: {
     fontSize: 20,
