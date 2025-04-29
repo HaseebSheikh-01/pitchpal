@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Link, router } from "expo-router";
+import API_IP from '../constants/apiConfig';
 
 export default function SignupScreen() {
   const [formData, setFormData] = useState({
@@ -66,7 +67,7 @@ export default function SignupScreen() {
     if (valid) {
       setLoading(true);
       try {
-        const response = await fetch("http://localhost:5000/auth/register", {
+        const response = await fetch(`${API_IP}/auth/register`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"

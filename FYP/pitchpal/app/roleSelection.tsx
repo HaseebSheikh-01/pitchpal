@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Link, router } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import API_IP from '../constants/apiConfig';
 
 export default function RoleSelectionScreen() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export default function RoleSelectionScreen() {
       }
 
       // Make the API call to update the user role
-      const response = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
+      const response = await fetch(`${API_IP}/api/users/${userId}/role`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

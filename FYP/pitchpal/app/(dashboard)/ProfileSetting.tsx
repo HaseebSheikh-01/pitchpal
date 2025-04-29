@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import API_IP from '../../constants/apiConfig';
 
-const API_URL = 'http://localhost:5000/api/investors';
+const API_URL = `${API_IP}/api/investors`;
 
 const industries = [
   'Technology',

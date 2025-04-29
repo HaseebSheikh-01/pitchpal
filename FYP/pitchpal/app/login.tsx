@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Link, router } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import API_IP from '../constants/apiConfig';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -46,7 +47,7 @@ export default function LoginScreen() {
     if (valid && isFormValid()) {
       setLoading(true);
       try {
-        const response = await fetch('http://localhost:5000/auth/login', {
+        const response = await fetch(`${API_IP}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
@@ -61,7 +62,7 @@ export default function LoginScreen() {
 
           // Save the token in AsyncStorage for future API calls
           await AsyncStorage.setItem('token', data.token);
-          await AsyncStorage.setItem('userId', data.user.id);  // Optionally save the user ID
+          await AsyncStorage.setItem('userId', data.user.id.toString());  // Optionally save the user ID as string
 
           // Redirect to role selection screen after successful login
           router.replace('/roleSelection');  // This will redirect the user to the role selection screen

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, TextInput, Button, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import API_IP from '../../constants/apiConfig';
 
 // Define the props type for AddStartupForm
 interface AddStartupFormProps {
@@ -83,7 +84,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
 
     try {
       const token = await AsyncStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/startups', {
+      const response = await fetch(`${API_IP}/api/startups`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
