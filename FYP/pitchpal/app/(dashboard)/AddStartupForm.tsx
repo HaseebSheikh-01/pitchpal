@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, Button, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Modal, View, Text, TextInput, Button, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker'; // For picking images
 
 // Define the props type for AddStartupForm
 interface AddStartupFormProps {
@@ -20,6 +20,7 @@ interface AddStartupFormProps {
     industry: string;
     minInvestment: string;
     maxInvestment: string;
+    photo: string | null; // New photo field
   }) => void;
 }
 
@@ -64,45 +65,26 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showIndustryModal, setShowIndustryModal] = useState(false);
   const [showStageModal, setShowStageModal] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null); // New state for photo
 
-  const handleSubmit = async () => {
-    const startupData = {
+  const handleSubmit = () => {
+    onAddStartup({
       name: startupName,
       category,
-      funding_total_usd: totalFunding,
-      funding_rounds: fundingRounds,
-      continent: selectedContinent,
-      country: locationCountry,
-      stage_of_business: stageOfBusiness,
+      totalFunding,
+      fundingRounds,
+      locationCity,
+      locationCountry,
+      foundedDate,
+      teamSize,
+      revenue,
+      stageOfBusiness,
       industry,
-      team_size: teamSize,
-      revenue_usd: revenue,
       minInvestment: minInvestment.toString(),
       maxInvestment: maxInvestment.toString(),
-    };
-
-    try {
-      const token = await AsyncStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/startups', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: token ? `Bearer ${token}` : '',
-        },
-        body: JSON.stringify(startupData),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const createdStartup = await response.json();
-      onAddStartup(createdStartup);
-      onClose();
-    } catch (error) {
-      console.error('Failed to create startup:', error);
-      alert('Failed to create startup. Please try again.');
-    }
+      photo,
+    });
+    onClose();
   };
 
   const handleSelection = (item: string, type: 'industry' | 'stage' | 'location') => {
@@ -124,6 +106,21 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
     setShowLocationModal(false); // Close continent modal
   };
 
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    // Fix for "cancelled" property and "uri" property type checking
+    if (result && result.assets && result.assets[0]) {
+      const { uri } = result.assets[0]; // Get uri from result
+      setPhoto(uri); // Set the photo URI
+    }
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -137,7 +134,6 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
             onChangeText={setStartupName} 
             style={styles.input} 
           />
-          
           
           {/* Total Funding */}
           <TextInput 
@@ -189,8 +185,6 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
             onChangeText={setLocationCountry} 
             style={styles.input} 
           />
-          
-         
           
           {/* Stage of Business Dropdown */}
           <TouchableOpacity onPress={() => setShowStageModal(true)} style={styles.dropdown}>
@@ -261,6 +255,12 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
             onChangeText={setRevenue} 
             style={styles.input} 
           />
+          
+          {/* Photo Upload */}
+          <TouchableOpacity onPress={pickImage} style={styles.uploadButton}>
+            <Text style={styles.uploadButtonText}>Upload Photo</Text>
+          </TouchableOpacity>
+          {photo && <Image source={{ uri: photo }} style={styles.uploadedImage} />}
 
           {/* Action Buttons with Round Corners */}
           <View style={styles.buttonsContainer}>
@@ -289,8 +289,6 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#121212',
     borderRadius: 15,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.3)', // Updated shadow
-    elevation: 8,
     marginHorizontal: 20
   },
   title: {
@@ -318,57 +316,69 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   dropdown: {
-    marginBottom: 15,
-    padding: 12,
-    backgroundColor: '#333333',
+    borderWidth: 1,
+    borderColor: '#1DB954',
+    padding: 10,
     borderRadius: 10,
-    color: '#FFFFFF',
-    fontSize: 16,
+    marginBottom: 15,
+    justifyContent: 'center',
   },
   dropdownText: {
-    color: '#1DB954',
     fontSize: 16,
+    color: '#FFFFFF',
   },
   selectedItemsText: {
-    color: '#AAAAAA',
-    fontSize: 14,
+    fontSize: 16,
+    color: '#FFFFFF',
     marginTop: 5,
   },
-  modal: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    backgroundColor: '#1E1E1E',
-    borderRadius: 10,
-    padding: 20,
-    elevation: 8,
-  },
-  optionButton: {
-    backgroundColor: '#1E1E1E',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  optionText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  optionTextSelected: {
-    color: '#1DB954',
-    fontWeight: 'bold',
-  },
   roundButton: {
+    padding: 12,
+    borderRadius: 50,
     backgroundColor: '#1DB954',
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 30,
-    justifyContent: 'center',
+    width: '48%',
     alignItems: 'center',
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  uploadButton: {
+    backgroundColor: '#1DB954',
+    padding: 15,
+    marginTop: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  uploadButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  uploadedImage: {
+    width: 100,
+    height: 100,
+    marginTop: 10,
+    borderRadius: 10,
+  },
+  modal: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  optionButton: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1DB954',
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  optionTextSelected: {
+    fontWeight: 'bold',
+    color: '#1DB954',
   },
 });
 
