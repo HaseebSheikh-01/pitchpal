@@ -9,21 +9,17 @@ import { MaterialIcons } from '@expo/vector-icons'; // For the update icon
 import API_IP from '../../constants/apiConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Define TypeScript interface
 interface Startup {
   name: string;
-  category: string;
-  totalFunding: string;
-  fundingRounds: string;
-  locationCity: string;
-  locationCountry: string;
-  foundedDate: string;
-  teamSize: string;
-  revenue: string;
-  stageOfBusiness: string;
-  industry: string; // Make sure industry is present in the interface
-  minInvestment: string;
-  maxInvestment: string;
+  funding_total_usd: number;
+  funding_rounds: number;
+  continent: string;
+  country: string;
+  stage_of_business: string;
+  industry: string;
+  team_size: number;
+  revenue_usd: number;
+  image: string | null;
 }
 
 export default function StartupDashboard() {
@@ -60,7 +56,15 @@ export default function StartupDashboard() {
         const data = await response.json();
         console.log('Fetched startups data:', data);
         if (data && Array.isArray(data.startups)) {
-          setStartups(data.startups);
+          // Normalize numeric fields to numbers
+          const normalizedStartups = data.startups.map((startup: any) => ({
+            ...startup,
+            funding_total_usd: Number(startup.funding_total_usd) || 0,
+            funding_rounds: Number(startup.funding_rounds) || 0,
+            team_size: Number(startup.team_size) || 0,
+            revenue_usd: Number(startup.revenue_usd) || 0,
+          }));
+          setStartups(normalizedStartups);
         } else {
           console.warn('API response does not contain startups array:', data);
           setStartups([]);
@@ -73,12 +77,33 @@ export default function StartupDashboard() {
     fetchStartups();
   }, []);
 
-  // Function to add startup to the list
-  const addStartup = (startup: Startup) => {
-    setStartups((prev) => [...prev, startup]);
-    setAddModalVisible(false);
-    setSnackbarVisible(true);
-    setTimeout(() => setSnackbarVisible(false), 2000);
+  const addStartup = async (startup: Startup) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        Alert.alert('Error', 'Authentication token not found. Please login again.');
+        return;
+      }
+      const response = await fetch(`${API_IP}/api/startups`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(startup),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const savedStartup = await response.json();
+      setStartups((prev) => [...prev, savedStartup]);
+      setAddModalVisible(false);
+      setSnackbarVisible(true);
+      setTimeout(() => setSnackbarVisible(false), 2000);
+    } catch (error) {
+      console.error('Failed to add startup:', error);
+      Alert.alert('Error', 'Failed to add startup. Please try again later.');
+    }
   };
 
   // Function to remove a startup
@@ -136,8 +161,8 @@ export default function StartupDashboard() {
               {/* Replace category with industry */}
               <Text style={styles.cardText}>Industry: {startup.industry}</Text>
 
-              <Text style={styles.cardText}>Funding: {startup.totalFunding}</Text>
-              <Text style={styles.cardText}>Location: {startup.locationCity}, {startup.locationCountry}</Text>
+              <Text style={styles.cardText}>Funding: ${Number(startup.funding_total_usd || 0).toLocaleString()}</Text>
+              <Text style={styles.cardText}>Location: {startup.continent}, {startup.country}</Text>
 
               {/* Update Button */}
               <TouchableOpacity

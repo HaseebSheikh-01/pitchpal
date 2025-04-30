@@ -4,25 +4,20 @@ import * as ImagePicker from 'expo-image-picker'; // For picking images
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_IP from '../../constants/apiConfig';
 
-// Define the props type for AddStartupForm
 interface AddStartupFormProps {
   visible: boolean;
   onClose: () => void;
   onAddStartup: (startup: {
     name: string;
-    category: string;
-    totalFunding: string;
-    fundingRounds: string;
-    locationCity: string;
-    locationCountry: string;
-    foundedDate: string;
-    teamSize: string;
-    revenue: string;
-    stageOfBusiness: string;
+    funding_total_usd: number;
+    funding_rounds: number;
+    continent: string;
+    country: string;
+    stage_of_business: string;
     industry: string;
-    minInvestment: string;
-    maxInvestment: string;
-    photo: string | null; // New photo field
+    team_size: number;
+    revenue_usd: number;
+    image: string | null; // New photo field
   }) => void;
 }
 
@@ -50,41 +45,72 @@ const countriesByContinent: CountriesByContinent = {
 };
 
 const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAddStartup }) => {
-  const [startupName, setStartupName] = useState('');
-  const [category, setCategory] = useState('');
-  const [totalFunding, setTotalFunding] = useState('');
-  const [fundingRounds, setFundingRounds] = useState('');
-  const [locationCity, setLocationCity] = useState('');
-  const [locationCountry, setLocationCountry] = useState('');
-  const [foundedDate, setFoundedDate] = useState('');
-  const [teamSize, setTeamSize] = useState('');
-  const [revenue, setRevenue] = useState('');
+  const [name, setName] = useState('');
+  const [funding_total_usd, setFundingTotalUsd] = useState('');
+  const [funding_rounds, setFundingRounds] = useState('');
+  const [continent, setContinent] = useState('');
+  const [country, setCountry] = useState('');
+  const [stage_of_business, setStageOfBusiness] = useState('');
   const [industry, setIndustry] = useState('');
-  const [stageOfBusiness, setStageOfBusiness] = useState('');
-  const [minInvestment, setMinInvestment] = useState(1000);
-  const [maxInvestment, setMaxInvestment] = useState(1000000);
-  const [selectedContinent, setSelectedContinent] = useState('');
+  const [team_size, setTeamSize] = useState('');
+  const [revenue_usd, setRevenueUsd] = useState('');
+  const [image, setImage] = useState<string | null>(null);
+
+  // Add missing modal and selection states
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showIndustryModal, setShowIndustryModal] = useState(false);
   const [showStageModal, setShowStageModal] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null); // New state for photo
+  const [selectedContinent, setSelectedContinent] = useState('');
 
   const handleSubmit = () => {
+    // Basic validation for required fields
+    if (!name.trim()) {
+      alert('Please enter the startup name.');
+      return;
+    }
+    if (!funding_total_usd.trim()) {
+      alert('Please enter the total funding.');
+      return;
+    }
+    if (!funding_rounds.trim()) {
+      alert('Please enter the funding rounds.');
+      return;
+    }
+    if (!selectedContinent.trim()) {
+      alert('Please select the continent.');
+      return;
+    }
+    if (!country.trim()) {
+      alert('Please enter the country.');
+      return;
+    }
+    if (!stage_of_business.trim()) {
+      alert('Please select the stage of business.');
+      return;
+    }
+    if (!industry.trim()) {
+      alert('Please select the industry.');
+      return;
+    }
+    if (!team_size.trim()) {
+      alert('Please enter the team size.');
+      return;
+    }
+    if (!revenue_usd.trim()) {
+      alert('Please enter the revenue.');
+      return;
+    }
     onAddStartup({
-      name: startupName,
-      category,
-      totalFunding,
-      fundingRounds,
-      locationCity,
-      locationCountry,
-      foundedDate,
-      teamSize,
-      revenue,
-      stageOfBusiness,
+      name,
+      funding_total_usd: Number(funding_total_usd),
+      funding_rounds: Number(funding_rounds),
+      continent: selectedContinent,
+      country,
+      stage_of_business,
       industry,
-      minInvestment: minInvestment.toString(),
-      maxInvestment: maxInvestment.toString(),
-      photo,
+      team_size: Number(team_size),
+      revenue_usd: Number(revenue_usd),
+      image,
     });
     onClose();
   };
@@ -97,14 +123,14 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
       setStageOfBusiness(item);
       setShowStageModal(false);
     } else if (type === 'location') {
-      setLocationCity(item);
+      setCountry(item);
       setShowLocationModal(false);
     }
   };
 
   const handleContinentSelection = (continent: string) => {
     setSelectedContinent(continent);
-    setLocationCountry(''); // Reset selected country when continent changes
+    setCountry(''); // Reset selected country when continent changes
     setShowLocationModal(false); // Close continent modal
   };
 
@@ -119,7 +145,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
     // Fix for "cancelled" property and "uri" property type checking
     if (result && result.assets && result.assets[0]) {
       const { uri } = result.assets[0]; // Get uri from result
-      setPhoto(uri); // Set the photo URI
+      setImage(uri); // Set the photo URI
     }
   };
 
@@ -132,25 +158,27 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
           {/* Startup Name */}
           <TextInput 
             placeholder="Startup Name" 
-            value={startupName} 
-            onChangeText={setStartupName} 
+            value={name} 
+            onChangeText={setName} 
             style={styles.input} 
           />
           
           {/* Total Funding */}
           <TextInput 
             placeholder="Total Funding" 
-            value={totalFunding} 
-            onChangeText={setTotalFunding} 
+            value={funding_total_usd} 
+            onChangeText={setFundingTotalUsd} 
             style={styles.input} 
+            keyboardType="numeric"
           />
           
           {/* Funding Rounds */}
           <TextInput 
             placeholder="Funding Rounds" 
-            value={fundingRounds} 
+            value={funding_rounds} 
             onChangeText={setFundingRounds} 
             style={styles.input} 
+            keyboardType="numeric"
           />
           
           {/* Continent Dropdown */}
@@ -183,15 +211,15 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
           {/* Country Text Input (User Enters Manually) */}
           <TextInput 
             placeholder="Enter Country Name" 
-            value={locationCountry} 
-            onChangeText={setLocationCountry} 
+            value={country} 
+            onChangeText={setCountry} 
             style={styles.input} 
           />
           
           {/* Stage of Business Dropdown */}
           <TouchableOpacity onPress={() => setShowStageModal(true)} style={styles.dropdown}>
             <Text style={styles.dropdownText}>Select Stage of Business</Text>
-            <Text style={styles.selectedItemsText}>{stageOfBusiness || 'None Selected'}</Text>
+            <Text style={styles.selectedItemsText}>{stage_of_business || 'None Selected'}</Text>
           </TouchableOpacity>
 
           {/* Stage Modal */}
@@ -205,7 +233,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
                     style={styles.optionButton}
                     onPress={() => handleSelection(stage, 'stage')}
                   >
-                    <Text style={[styles.optionText, stageOfBusiness === stage && styles.optionTextSelected]}>
+                    <Text style={[styles.optionText, stage_of_business === stage && styles.optionTextSelected]}>
                       {stage}
                     </Text>
                   </TouchableOpacity>
@@ -245,24 +273,26 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
           {/* Team Size */}
           <TextInput 
             placeholder="Team Size" 
-            value={teamSize} 
+            value={team_size} 
             onChangeText={setTeamSize} 
             style={styles.input} 
+            keyboardType="numeric"
           />
           
           {/* Revenue */}
           <TextInput 
             placeholder="Revenue in $USD" 
-            value={revenue} 
-            onChangeText={setRevenue} 
+            value={revenue_usd} 
+            onChangeText={setRevenueUsd} 
             style={styles.input} 
+            keyboardType="numeric"
           />
           
           {/* Photo Upload */}
           <TouchableOpacity onPress={pickImage} style={styles.uploadButton}>
             <Text style={styles.uploadButtonText}>Upload Photo</Text>
           </TouchableOpacity>
-          {photo && <Image source={{ uri: photo }} style={styles.uploadedImage} />}
+          {image && <Image source={{ uri: image }} style={styles.uploadedImage} />}
 
           {/* Action Buttons with Round Corners */}
           <View style={styles.buttonsContainer}>
