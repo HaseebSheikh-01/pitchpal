@@ -67,41 +67,50 @@ export default function InvestorDashboard() {
 
     // Fetch userId from AsyncStorage and then fetch user data from API
     const fetchUserData = async () => {
-  try {
-    const userId = await AsyncStorage.getItem("userId");
-    const token = await AsyncStorage.getItem("token"); // Fetch token from AsyncStorage
+      try {
+        const userId = await AsyncStorage.getItem("userId");
+        const token = await AsyncStorage.getItem("token"); // Fetch token from AsyncStorage
 
-    if (!userId || !token) {
-      console.error("User ID or token is missing");
-      return;
-    }
+        if (!userId || !token) {
+          console.error("User ID or token is missing");
+          return;
+        }
 
-    const response = await fetch(`${API_IP}/api/users/${userId}`, {
-      method: 'GET', // Ensure you are using the correct HTTP method (GET)
-      headers: {
-        Authorization: `Bearer ${token}`, // Include the token in the Authorization header
-      },
-    });
+        const response = await fetch(`${API_IP}/api/users/${userId}`, {
+          method: 'GET', // Ensure you are using the correct HTTP method (GET)
+          headers: {
+            Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+          },
+        });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch user data: ${response.status}`);
-    }
+        if (!response.ok) {
+          throw new Error(`Failed to fetch user data: ${response.status}`);
+        }
 
-    const data = await response.json();
-    if (data.user) {
-      setUsername(data.user.name);
-    }
-  } catch (error) {
-    console.error("Failed to fetch user data", error);
-  } finally {
-    setLoading(false);
-  }
-};
-
+        const data = await response.json();
+        if (data.user) {
+          setUsername(data.user.name);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
     fetchAnalytics();
     fetchUserData();
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      // Clear AsyncStorage to log the user out
+      await AsyncStorage.clear();
+      router.push("/login"); // Redirect to the login screen after logging out
+    } catch (error) {
+      console.error("Error logging out", error);
+    }
+  };
 
   if (loading) {
     return (
@@ -145,6 +154,12 @@ export default function InvestorDashboard() {
       <TouchableOpacity style={styles.viewStartupsButton} onPress={() => router.push("/(dashboard)/Matchingscreen")}>
         <Ionicons name="rocket" size={20} color="white" style={{ marginRight: 8 }} />
         <Text style={styles.viewStartupsButtonText}>View Startups</Text>
+      </TouchableOpacity>
+
+      {/* Logout Button */}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Ionicons name="log-out" size={20} color="white" style={{ marginRight: 8 }} />
+        <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
 
       {/* Bottom Navigation Bar */}
@@ -213,6 +228,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   viewStartupsButtonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  logoutButton: {
+    flexDirection: "row",
+    backgroundColor: "#E91E63", // Red color for logout
+    paddingVertical: 15,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 40,
+  },
+  logoutButtonText: {
     color: "white",
     fontSize: 18,
     fontWeight: "600",

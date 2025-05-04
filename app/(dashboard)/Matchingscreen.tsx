@@ -15,6 +15,7 @@ type Startup = {
   description: string;
   industry: string;
   funding: string;
+  revenue_usd: number; // Added revenue field
   image: string;
 };
 
@@ -33,25 +34,17 @@ export default function Matchingscreen() {
         setLoading(true);
         setError(null);
 
-        const keys = await AsyncStorage.getAllKeys();
-        console.log('AsyncStorage keys:', keys);
-        const stores = await AsyncStorage.multiGet(keys);
-        stores.forEach(([key, value]) => {
-          console.log(`AsyncStorage key: ${key}, value: ${value}`);
-        });
-
         const userId = await AsyncStorage.getItem('userId');
         const investorId = await AsyncStorage.getItem('investorId');
         const token = await AsyncStorage.getItem('token');
         const idToUse = investorId || userId;
-        console.log('Fetching startups for investorId/userId:', idToUse);
+
         if (!idToUse) {
           setError('User identifier not found. Please login again.');
           setLoading(false);
           return;
         }
         const url = `${API_IP}/api/investors/${idToUse}/match`;
-        console.log('Fetching from URL:', url);
         const response = await fetch(url, {
           headers: {
             Authorization: token ? `Bearer ${token}` : '',
@@ -66,13 +59,11 @@ export default function Matchingscreen() {
         } else if (data && Array.isArray(data.startups)) {
           setStartups(data.startups);
         } else {
-          console.error('Expected array but got:', data);
           setError('Unexpected data format received from server.');
           setStartups([]);
         }
       } catch (err) {
         setError('Failed to fetch matching startups. Please try again later.');
-        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -180,7 +171,12 @@ export default function Matchingscreen() {
               <Text style={styles.name}>{startup.name}</Text>
               <Text style={styles.description}>{startup.description}</Text>
               <Text style={styles.industry}>{startup.industry}</Text>
-              <Text style={styles.funding}>{startup.funding}</Text>
+              <Text style={styles.funding}>Funding: {startup.funding}</Text>
+              <Text style={styles.revenue}>Revenue: ${startup.revenue_usd.toLocaleString()}</Text>
+              {/* Check Success Button */}
+              <TouchableOpacity style={styles.checkButton} onPress={() => Alert.alert('Check Success', `Checking success for ${startup.name}`)}>
+                <Text style={styles.checkButtonText}>Check Success</Text>
+              </TouchableOpacity>
             </View>
           </Animated.View>
         );
@@ -192,7 +188,12 @@ export default function Matchingscreen() {
             <Text style={styles.name}>{startup.name}</Text>
             <Text style={styles.description}>{startup.description}</Text>
             <Text style={styles.industry}>{startup.industry}</Text>
-            <Text style={styles.funding}>{startup.funding}</Text>
+            <Text style={styles.funding}>Funding: {startup.funding}</Text>
+            <Text style={styles.revenue}>Revenue: ${startup.revenue_usd.toLocaleString()}</Text>
+            {/* Check Success Button */}
+            <TouchableOpacity style={styles.checkButton} onPress={() => Alert.alert('Check Success', `Checking success for ${startup.name}`)}>
+              <Text style={styles.checkButtonText}>Check Success</Text>
+            </TouchableOpacity>
           </View>
         </View>
       );
@@ -251,38 +252,57 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 5,
-    padding: 20,
+    padding: 25,
   },
   image: {
     width: '100%',
-    height: 200,
+    height: 250,
     borderRadius: 12,
-    marginBottom: 15,
+    marginBottom: 20,
   },
   cardDetails: {
     alignItems: 'center',
   },
   name: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 5,
-  },
-  description: {
-    fontSize: 14,
-    color: '#AAAAAA',
     marginBottom: 10,
   },
-  industry: {
+  description: {
     fontSize: 16,
+    color: '#AAAAAA',
+    marginBottom: 15,
+  },
+  industry: {
+    fontSize: 18,
     color: '#FF6347',
     fontWeight: '600',
-    marginBottom: 5,
+    marginBottom: 10,
   },
   funding: {
-    fontSize: 18,
+    fontSize: 20,
     color: '#1E90FF',
     fontWeight: '700',
+  },
+  revenue: {
+    fontSize: 20,
+    color: '#4CAF50',
+    fontWeight: '700',
+    marginTop: 5,
+  },
+  checkButton: {
+    backgroundColor: '#FF9800',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  checkButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   noMoreCards: {
     flex: 1,

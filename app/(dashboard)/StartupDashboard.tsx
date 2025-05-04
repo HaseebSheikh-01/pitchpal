@@ -1,13 +1,11 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Snackbar } from 'react-native-paper';
 import AddStartupForm from './AddStartupForm';
-// import UpdateStartupForm from './UpdateStartupForm'; // Import UpdateStartupForm
 import { MaterialIcons } from '@expo/vector-icons'; // For the update icon
 import API_IP from '../../constants/apiConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router'; // Import router
 
 interface Startup {
   name: string;
@@ -29,6 +27,8 @@ export default function StartupDashboard() {
   const [startups, setStartups] = useState<Startup[]>([]);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  const router = useRouter(); // Router instance for navigation
 
   // Fetch startups from API on component mount
   useEffect(() => {
@@ -106,37 +106,16 @@ export default function StartupDashboard() {
     }
   };
 
-  // Function to remove a startup
-  const removeStartup = (index: number) => {
-    Alert.alert(
-      'Confirm Removal',
-      'Are you sure you want to remove this startup?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Remove',
-          onPress: () => {
-            setStartups((prevStartups) => prevStartups.filter((_, idx) => idx !== index));
-          },
-          style: 'destructive',
-        },
-      ],
-      { cancelable: false }
-    );
-  };
-
-  // Function to update a startup
-  const updateStartup = (updatedStartup: Startup, index: number) => {
-    const updatedStartups = startups.map((startup, idx) =>
-      idx === index ? updatedStartup : startup
-    );
-    setStartups(updatedStartups);
-    setUpdateModalVisible(false);
-    setSnackbarVisible(true);
-    setTimeout(() => setSnackbarVisible(false), 2000);
+  const handleLogout = async () => {
+    try {
+      // Clear AsyncStorage to log the user out
+      await AsyncStorage.clear();
+      Alert.alert('Logged Out', 'You have successfully logged out.');
+      // Redirect to the login screen after logging out
+      router.push('/login'); // Correct path to the login screen
+    } catch (error) {
+      console.error("Error logging out", error);
+    }
   };
 
   return (
@@ -157,14 +136,10 @@ export default function StartupDashboard() {
           {startups.map((startup, index) => (
             <View key={index} style={styles.card}>
               <Text style={styles.cardTitle}>{startup.name}</Text>
-
-              {/* Replace category with industry */}
               <Text style={styles.cardText}>Industry: {startup.industry}</Text>
-
               <Text style={styles.cardText}>Funding: ${Number(startup.funding_total_usd || 0).toLocaleString()}</Text>
               <Text style={styles.cardText}>Location: {startup.continent}, {startup.country}</Text>
 
-              {/* Update Button */}
               <TouchableOpacity
                 style={styles.updateButton}
                 onPress={() => {
@@ -182,17 +157,11 @@ export default function StartupDashboard() {
       {/* Add Startup Form Modal */}
       <AddStartupForm visible={isAddModalVisible} onClose={() => setAddModalVisible(false)} onAddStartup={addStartup} />
 
-      {/* Update Startup Form Modal */}
-      {/* {selectedStartup && (
-        <UpdateStartupForm
-          visible={isUpdateModalVisible}
-          onClose={() => setUpdateModalVisible(false)}
-          onUpdateStartup={updateStartup}
-          onDeleteStartup={removeStartup}  // Pass the delete function to the Update form
-          startup={selectedStartup}
-          startupIndex={startups.findIndex((s) => s === selectedStartup)} // Pass index of the startup to be updated
-        />
-      )} */}
+      {/* Logout Button */}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <MaterialIcons name="logout" size={20} color="white" style={{ marginRight: 8 }} />
+        <Text style={styles.logoutButtonText}>Logout</Text>
+      </TouchableOpacity>
 
       {/* Snackbar for success message */}
       {isMounted && (
@@ -218,14 +187,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   welcomeText: {
-    fontSize: 16, // Slightly smaller for a minimal look
-    color: '#B2B2B2', // Soft neutral gray
+    fontSize: 16,
+    color: '#B2B2B2',
     marginBottom: 30,
     textAlign: 'center',
-    lineHeight: 28, // A bit more line height for a more spacious feel
-    letterSpacing: 0.5, // Add some spacing for readability and elegance
-    fontWeight: '300', // Light font weight for a softer appearance
-    textTransform: 'none', // Keeping it normal case for a sleek aesthetic
   },
   addButton: {
     backgroundColor: '#4CAF50',
@@ -235,8 +200,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 5,
     marginBottom: 15,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
   },
   updateButton: {
     backgroundColor: '#FF9800',
@@ -246,13 +215,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 5,
     marginBottom: 20,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
   },
   card: {
     backgroundColor: '#3A3A3A',
@@ -260,7 +223,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 15,
     elevation: 3,
-    position: 'relative',
   },
   cardTitle: {
     fontSize: 20,
@@ -277,5 +239,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 30,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    backgroundColor: '#E91E63', // Red color for logout
+    paddingVertical: 15,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  logoutButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
   },
 });

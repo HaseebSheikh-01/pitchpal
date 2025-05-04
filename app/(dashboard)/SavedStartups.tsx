@@ -3,8 +3,21 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react
 import AsyncStorage from '@react-native-async-storage/async-storage'; // For saving data locally
 import { useNavigation } from '@react-navigation/native'; // Import useNavigation hook
 
+// Define types
+interface Startup {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface SavedStartupsProps {
+  visible: boolean;
+  onClose: () => void;
+  onAddStartup: (startup: Startup) => void;
+}
+
 // Function to get saved startups from AsyncStorage
-const getSavedStartups = async () => {
+const getSavedStartups = async (): Promise<Startup[]> => {
   try {
     const savedStartups = await AsyncStorage.getItem('savedStartups');
     return savedStartups ? JSON.parse(savedStartups) : [];
@@ -15,11 +28,11 @@ const getSavedStartups = async () => {
 };
 
 // Function to remove a startup from AsyncStorage
-const removeStartup = async (startupId) => {
+const removeStartup = async (startupId: string): Promise<Startup[]> => {
   try {
     const currentStartups = await AsyncStorage.getItem('savedStartups');
     const startups = currentStartups ? JSON.parse(currentStartups) : [];
-    const updatedStartups = startups.filter((startup) => startup.id !== startupId);
+    const updatedStartups = startups.filter((startup: Startup) => startup.id !== startupId);
 
     await AsyncStorage.setItem('savedStartups', JSON.stringify(updatedStartups));
     return updatedStartups; // Return updated list after removal
@@ -30,7 +43,7 @@ const removeStartup = async (startupId) => {
 };
 
 export default function SavedStartups() {
-  const [savedStartups, setSavedStartups] = useState<{ id: string, name: string, description: string }[]>([]);
+  const [savedStartups, setSavedStartups] = useState<Startup[]>([]);
   const navigation = useNavigation(); // Get the navigation object
 
   // Fetch saved startups when component mounts
@@ -43,13 +56,13 @@ export default function SavedStartups() {
     fetchSavedStartups();
   }, []);
 
-  const handleRemoveStartup = async (startupId) => {
+  const handleRemoveStartup = async (startupId: string) => {
     const updatedStartups = await removeStartup(startupId);
     setSavedStartups(updatedStartups); // Update UI after removal
     Alert.alert('Removed', 'Startup has been removed from your saved list!');
   };
 
-  const renderItem = ({ item }: { item: { id: string; name: string; description: string } }) => (
+  const renderItem = ({ item }: { item: Startup }) => (
     <View style={styles.startupCard}>
       <Text style={styles.startupName}>{item.name}</Text>
       <Text style={styles.startupDescription}>{item.description}</Text>
