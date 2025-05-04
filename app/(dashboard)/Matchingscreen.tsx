@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router'; // Import router from expo-router
 import API_IP from '../../constants/apiConfig';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 250;
 
@@ -244,7 +245,8 @@ const styles = StyleSheet.create({
   },
   card: {
     position: 'absolute',
-    width: '100%',
+    width: SCREEN_WIDTH * 0.9, // Make card width responsive
+    height: SCREEN_HEIGHT * 0.7, // Make card height responsive
     borderRadius: 15,
     backgroundColor: '#1E1E1E',
     shadowColor: '#000',
@@ -252,7 +254,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 5,
-    padding: 25,
+    padding: 20,
   },
   image: {
     width: '100%',
@@ -264,7 +266,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   name: {
-    fontSize: 28,
+    fontSize: SCREEN_WIDTH * 0.08, // Adjust font size based on screen width
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 10,

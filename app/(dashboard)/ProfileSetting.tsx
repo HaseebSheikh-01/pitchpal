@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity, Dimensions } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_IP from '../../constants/apiConfig';
 import { useRouter } from 'expo-router'; // Import router from expo-router
@@ -17,6 +17,9 @@ const areas = [
 const startupTypes = [
   'Seed', 'Early Stage', 'Growth Stage', 'Late Stage'
 ];
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 function MultiSelectDropdown({
   label,
@@ -70,27 +73,26 @@ export default function ProfileSetting() {
 
   const router = useRouter(); // Use the router from expo-router
 
-  // Fetch the user ID from AsyncStorage and then fetch investor data
   useEffect(() => {
     const fetchInvestorData = async () => {
       try {
         const userId = await AsyncStorage.getItem("userId");
         const token = await AsyncStorage.getItem("token");
-    
+
         if (userId && token) {
           const response = await fetch(`${API_URL}/${userId}`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           });
-    
+
           if (!response.ok) {
             throw new Error(`Failed to fetch investor data: ${response.statusText}`);
           }
-    
+
           const data = await response.json();
           const investor = data.investor;
-    
+
           setName(investor.full_name);
           setEmail(investor.email);
           setCompany(investor.company);
@@ -101,8 +103,8 @@ export default function ProfileSetting() {
           setSelectedAreas(investor.area || []);
           setSelectedStartupTypes(investor.type_of_startup || []);
         }
-      } catch (error: unknown) { // Explicitly set the error type as 'unknown'
-        if (error instanceof Error) { // Type check to narrow down the error type
+      } catch (error: unknown) {
+        if (error instanceof Error) {
           console.error("Error fetching investor data:", error.message);
           Alert.alert("Error", `Failed to fetch investor data: ${error.message}`);
         } else {
@@ -111,7 +113,6 @@ export default function ProfileSetting() {
         }
       }
     };
-    
 
     fetchInvestorData();
   }, []);
@@ -120,7 +121,6 @@ export default function ProfileSetting() {
     const minVal = parseInt(minInvestment, 10);
     const maxVal = parseInt(maxInvestment, 10);
 
-    // Form validation
     if (minVal >= maxVal) {
       Alert.alert("Error", "Minimum investment must be less than maximum investment.");
       return;
@@ -131,7 +131,6 @@ export default function ProfileSetting() {
       return;
     }
 
-    // Validate email format
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
       Alert.alert("Error", "Please enter a valid email address.");
@@ -167,8 +166,6 @@ export default function ProfileSetting() {
 
       const data = await response.json();
       Alert.alert("Profile Submitted", data.message || "Your profile has been successfully submitted.");
-      
-      // Save the updated profile data to AsyncStorage
       await AsyncStorage.setItem('profileData', JSON.stringify(profileData));
 
     } catch (error: unknown) {
@@ -182,12 +179,10 @@ export default function ProfileSetting() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Back button */}
       <TouchableOpacity style={styles.backButton} onPress={() => router.push('/InvestorDashboard')}>
         <Text style={styles.backButtonText}>Back</Text>
       </TouchableOpacity>
 
-      {/* Title centered */}
       <Text style={styles.title}>Profile Settings</Text>
 
       <Text style={styles.label}>Name</Text>
@@ -289,7 +284,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   title: {
-    fontSize: 28,
+    fontSize: SCREEN_WIDTH * 0.08, // Responsive title font size
     fontWeight: "bold",
     color: "#FFFFFF",
     textAlign: 'center', // Center the title
@@ -305,6 +300,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     padding: 10,
     borderRadius: 8,
+    width: "100%", // Full width input field
   },
   rangeInputContainer: {
     flexDirection: "row",
@@ -317,7 +313,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     padding: 10,
     borderRadius: 8,
-    width: "40%",
+    width: "45%", // Adjust width for inputs
   },
   multiSelectContainer: {
     marginTop: 15,
