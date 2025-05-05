@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, Linking, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // For saving data locally
 import { useNavigation } from '@react-navigation/native'; // Import useNavigation hook
 
@@ -8,6 +8,7 @@ interface Startup {
   id: string;
   name: string;
   description: string;
+  contactLink: string; // Assuming each startup has a contact link
 }
 
 interface SavedStartupsProps {
@@ -62,10 +63,24 @@ export default function SavedStartups() {
     Alert.alert('Removed', 'Startup has been removed from your saved list!');
   };
 
+  const handleContact = (contactLink: string) => {
+    // Example: open the contact link in the browser or initiate an email
+    Linking.openURL(contactLink);
+  };
+
   const renderItem = ({ item }: { item: Startup }) => (
     <View style={styles.startupCard}>
       <Text style={styles.startupName}>{item.name}</Text>
       <Text style={styles.startupDescription}>{item.description}</Text>
+
+      {/* Contact Button */}
+      <TouchableOpacity
+        style={styles.contactButton}
+        onPress={() => handleContact(item.contactLink)}
+      >
+        <Text style={styles.contactButtonText}>Contact</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={styles.removeButton}
         onPress={() => handleRemoveStartup(item.id)}
@@ -76,7 +91,7 @@ export default function SavedStartups() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Back Button */}
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Text style={styles.backButtonText}>←</Text> {/* Using a simple arrow for a clean UI */}
@@ -93,7 +108,7 @@ export default function SavedStartups() {
           contentContainerStyle={styles.listContent}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -101,12 +116,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212',
-    paddingTop: 60,
     paddingHorizontal: 20,
+    paddingTop: 50, // Increased padding to avoid overlap with notch
   },
   backButton: {
     position: 'absolute', // Position it at the top-left
-    top: 20,
+    top: 40, // Increased to avoid notch area, especially on devices like iPhone 16 Pro Max
     left: 20,
     padding: 10,
     backgroundColor: '#444444',
@@ -125,8 +140,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginTop: 60, // To avoid overlap with the back button
+    marginTop: 100, // Add top margin for better spacing on larger screens and to avoid overlap
     marginBottom: 20,
+    marginLeft: 20, // Added left margin for alignment
   },
   noStartupsText: {
     fontSize: 18,
@@ -134,6 +150,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginTop: 20,
     textAlign: 'center',
+    flex: 1, // Take up remaining space
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContent: {
     paddingBottom: 20,
@@ -141,7 +160,7 @@ const styles = StyleSheet.create({
   startupCard: {
     backgroundColor: '#1E1E1E',
     borderRadius: 12,
-    padding: 15,
+    padding: 20, // Increased padding for better alignment and separation
     marginBottom: 15,
   },
   startupName: {
@@ -153,6 +172,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#AAAAAA',
     marginTop: 5,
+  },
+  contactButton: {
+    marginTop: 10,
+    backgroundColor: '#4CAF50',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  contactButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   removeButton: {
     marginTop: 10,

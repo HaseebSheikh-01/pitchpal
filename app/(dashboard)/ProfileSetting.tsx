@@ -269,15 +269,19 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#121212",
     flexGrow: 1,
-    paddingTop: 60,
+    paddingTop: 80, // Increased margin to ensure proper spacing
   },
   backButton: {
     position: 'absolute',
-    top: 20,
+    top: 40, // Adjusted top margin to avoid notch area
     left: 20,
     padding: 10,
     backgroundColor: '#1E90FF',
-    borderRadius: 5,
+    borderRadius: 30,  // Rounded corners
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 100, // Adjusted width for back button
+    height: 40, // Adjusted height for back button
   },
   backButtonText: {
     color: '#FFFFFF',

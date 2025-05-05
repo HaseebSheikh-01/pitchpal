@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, Animated, PanResponder, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, Dimensions, Animated, PanResponder, TouchableOpacity, Alert, ActivityIndicator, ViewStyle } from 'react-native';
 import BottomNavBar from './BottomNavBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router'; // Import router from expo-router
@@ -21,7 +21,7 @@ type Startup = {
 };
 
 export default function Matchingscreen() {
-  const [startups, setStartups] = useState<Startup[]>([]);
+  const [startups, setStartups] = useState<Startup[]>([]); 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
@@ -214,7 +214,8 @@ export default function Matchingscreen() {
         {showEmoji && <Text style={styles.emoji}>{showEmoji}</Text>}
       </View>
 
-      <BottomNavBar selected="home" />
+      {/* Pass style as a prop to BottomNavBar */}
+      <BottomNavBar selected="home" style={styles.bottomNavBar} />
     </View>
   );
 }
@@ -223,17 +224,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212',
-    paddingTop: 60,
+    paddingTop: 60,  // Adjust this to give margin to top
     paddingHorizontal: 20,
     justifyContent: 'center',
   },
   backButton: {
     position: 'absolute',
-    top: 20,
+    top: 60,  // Added top margin to avoid overlap with cards
     left: 20,
     padding: 10,
     backgroundColor: '#1E90FF',
     borderRadius: 5,
+    zIndex: 2,  // Ensures back button is above the cards
   },
   backButtonText: {
     color: '#FFFFFF',
@@ -242,6 +244,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     flex: 1,
     justifyContent: 'center',
+    marginTop: 80,  // Added margin to avoid overlap with back button
   },
   card: {
     position: 'absolute',
@@ -344,5 +347,8 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#F72585',
     fontSize: 16,
+  },
+  bottomNavBar: {
+    marginBottom: 20,  // Add margin bottom to the bottom nav bar
   },
 });

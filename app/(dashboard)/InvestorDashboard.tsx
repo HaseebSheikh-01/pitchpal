@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import API_IP from "../../constants/apiConfig"; // Replace with your API IP
 
-const investorSample = {
-  name: "",
-  profilePic: "",
-};
-
+// Function to handle statistics card
 function StatisticCard({
   icon,
   label,
@@ -39,11 +35,12 @@ function BottomNavBar({ selected }: { selected: string }) {
         <Ionicons name="home" size={28} color={selected === "home" ? "#1E90FF" : "#888"} />
         <Text style={[styles.navText, selected === "home" && styles.navTextSelected]}>Home</Text>
       </TouchableOpacity>
-      {/* Removed Discover button as per request */}
+
       <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(dashboard)/SavedStartups")}>
         <FontAwesome name="heart" size={28} color={selected === "saved" ? "#1E90FF" : "#888"} />
         <Text style={[styles.navText, selected === "saved" && styles.navTextSelected]}>Saved</Text>
       </TouchableOpacity>
+
       <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(dashboard)/ProfileSetting")}>
         <MaterialIcons name="person" size={28} color={selected === "profile" ? "#1E90FF" : "#888"} />
         <Text style={[styles.navText, selected === "profile" && styles.navTextSelected]}>Profile</Text>
@@ -77,7 +74,7 @@ export default function InvestorDashboard() {
         }
 
         const response = await fetch(`${API_IP}/api/users/${userId}`, {
-          method: 'GET', // Ensure you are using the correct HTTP method (GET)
+          method: "GET", // Ensure you are using the correct HTTP method (GET)
           headers: {
             Authorization: `Bearer ${token}`, // Include the token in the Authorization header
           },
@@ -150,10 +147,16 @@ export default function InvestorDashboard() {
         />
       </View>
 
-      {/* Action Button */}
+      {/* Action Buttons */}
       <TouchableOpacity style={styles.viewStartupsButton} onPress={() => router.push("/(dashboard)/Matchingscreen")}>
         <Ionicons name="rocket" size={20} color="white" style={{ marginRight: 8 }} />
         <Text style={styles.viewStartupsButtonText}>View Startups</Text>
+      </TouchableOpacity>
+
+      {/* Discover Button */}
+      <TouchableOpacity style={styles.discoverButton} onPress={() => router.push("/(dashboard)/discover")}>
+        <Ionicons name="search" size={20} color="white" style={{ marginRight: 8 }} />
+        <Text style={styles.discoverButtonText}>Discover</Text>
       </TouchableOpacity>
 
       {/* Logout Button */}
@@ -164,10 +167,14 @@ export default function InvestorDashboard() {
 
       {/* Bottom Navigation Bar */}
       <BottomNavBar selected="home" />
+
+      {/* Bottom Margin for better spacing */}
+      <View style={{ marginBottom: 20 }} />
     </View>
   );
 }
 
+// New Style for the Discover Button
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -228,6 +235,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   viewStartupsButtonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  discoverButton: {
+    flexDirection: "row",
+    backgroundColor: "#FF9800", // Change color for Discover button
+    paddingVertical: 15,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  discoverButtonText: {
     color: "white",
     fontSize: 18,
     fontWeight: "600",
