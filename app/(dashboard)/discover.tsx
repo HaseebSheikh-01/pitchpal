@@ -13,7 +13,7 @@ interface NewsItem {
 export default function Discover() {
   const router = useRouter();
   const [newsData, setNewsData] = useState<NewsItem[]>([]);  // Define state type
-  const [pressed, setPressed] = useState(false);
+  const [pressedId, setPressedId] = useState<number | null>(null);
 
   // Fetch dummy data for news (replace with actual API later)
   useEffect(() => {
@@ -26,8 +26,8 @@ export default function Discover() {
   }, []);
 
   // Animation for press effect
-  const pressIn = () => setPressed(true);
-  const pressOut = () => setPressed(false);
+  const pressIn = (id: number) => setPressedId(id);
+  const pressOut = () => setPressedId(null);
 
   return (
     <View style={styles.container}>
@@ -40,17 +40,17 @@ export default function Discover() {
       <Text style={styles.description}>Here you can discover new startups...</Text>
 
       {/* News cards */}
-      <ScrollView contentContainerStyle={styles.newsContainer}>
+      <ScrollView contentContainerStyle={styles.newsContainer} showsVerticalScrollIndicator={false}>
         {newsData.map((item) => (
           <Animated.View
             key={item.id}
-            style={[styles.card, pressed && styles.cardPressed]} // Animation when card is pressed
+            style={[styles.card, pressedId === item.id && styles.cardPressed]} // Animation when card is pressed
           >
             <Text style={styles.cardTitle}>{item.title}</Text>
             <Text style={styles.cardDescription}>{item.description}</Text>
             <TouchableOpacity
               style={styles.cardButton}
-              onPressIn={pressIn}  // Add press effect
+              onPressIn={() => pressIn(item.id)}  // Add press effect
               onPressOut={pressOut}  // Remove press effect
               onPress={() => Linking.openURL(item.link)}
             >
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: "absolute",
-    top: 40,  // Increased top margin to avoid the notch area
+    top: 60,  // Increased top margin to add more space from the top edge
     left: 20,
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -106,6 +106,7 @@ const styles = StyleSheet.create({
   newsContainer: {
     width: "100%",
     paddingBottom: 20,
+    alignItems: "center",
   },
   card: {
     backgroundColor: "#1F1F1F",
@@ -113,6 +114,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 25,
     width: "100%",
+    maxWidth: 600,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

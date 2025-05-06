@@ -83,7 +83,7 @@ export default function RoleSelectionScreen() {
             styles.roleButton, 
             selectedRole === 'investor' && styles.selectedRoleButton
           ]}
-          onPress={() => handleRoleSelect('investor')}
+          onPress={() => router.push('/(dashboard)/newProfile')}
         >
           <Text style={styles.roleButtonText}>🔵 I'm an Investor</Text>
           <Text style={styles.roleDescription}>Discover and invest in promising startups</Text>

@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Snackbar } from 'react-native-paper';
 import AddStartupForm from './AddStartupForm';
+import EditStartupForm from './EditStartupForm'; // Import the EditStartupForm
 import { MaterialIcons } from '@expo/vector-icons'; // For the update icon
 import API_IP from '../../constants/apiConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router'; // Import router
 
 interface Startup {
+  id: string; // Ensure id is part of the startup type
   name: string;
   funding_total_usd: number;
   funding_rounds: number;
@@ -20,7 +22,7 @@ interface Startup {
   image: string | null;
 }
 
-export default function StartupDashboard() {
+const StartupDashboard: React.FC = () => {
   const [isAddModalVisible, setAddModalVisible] = useState(false);
   const [isUpdateModalVisible, setUpdateModalVisible] = useState(false);
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null); // Store selected startup for update
@@ -30,7 +32,6 @@ export default function StartupDashboard() {
 
   const router = useRouter(); // Router instance for navigation
 
-  // Fetch startups from API on component mount
   useEffect(() => {
     setIsMounted(true);
     const fetchStartups = async () => {
@@ -56,7 +57,6 @@ export default function StartupDashboard() {
         const data = await response.json();
         console.log('Fetched startups data:', data);
         if (data && Array.isArray(data.startups)) {
-          // Normalize numeric fields to numbers
           const normalizedStartups = data.startups.map((startup: any) => ({
             ...startup,
             funding_total_usd: Number(startup.funding_total_usd) || 0,
@@ -106,13 +106,44 @@ export default function StartupDashboard() {
     }
   };
 
+  const updateStartup = async (updatedStartup: Startup) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        Alert.alert('Error', 'Authentication token not found. Please login again.');
+        return;
+      }
+      const response = await fetch(`${API_IP}/api/startups/${updatedStartup.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedStartup),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const updatedData = await response.json();
+      setStartups((prev) =>
+        prev.map((startup) =>
+          startup.id === updatedData.id ? updatedData : startup
+        )
+      );
+      setUpdateModalVisible(false);
+      setSnackbarVisible(true);
+      setTimeout(() => setSnackbarVisible(false), 2000);
+    } catch (error) {
+      console.error('Failed to update startup:', error);
+      Alert.alert('Error', 'Failed to update startup. Please try again later.');
+    }
+  };
+
   const handleLogout = async () => {
     try {
-      // Clear AsyncStorage to log the user out
       await AsyncStorage.clear();
       Alert.alert('Logged Out', 'You have successfully logged out.');
-      // Redirect to the login screen after logging out
-      router.push('/login'); // Correct path to the login screen
+      router.push('/login'); 
     } catch (error) {
       console.error("Error logging out", error);
     }
@@ -157,6 +188,16 @@ export default function StartupDashboard() {
       {/* Add Startup Form Modal */}
       <AddStartupForm visible={isAddModalVisible} onClose={() => setAddModalVisible(false)} onAddStartup={addStartup} />
 
+      {/* Update Startup Form Modal */}
+      {selectedStartup && (
+        <EditStartupForm
+          visible={isUpdateModalVisible}
+          onClose={() => setUpdateModalVisible(false)}
+          onUpdateStartup={updateStartup} 
+          startup={selectedStartup} 
+        />
+      )}
+
       {/* Logout Button */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <MaterialIcons name="logout" size={20} color="white" style={{ marginRight: 8 }} />
@@ -171,13 +212,14 @@ export default function StartupDashboard() {
       )}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
     backgroundColor: '#2A2A2A',
+    marginTop: 30,
   },
   title: {
     fontSize: 36,
@@ -242,7 +284,7 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     flexDirection: 'row',
-    backgroundColor: '#E91E63', // Red color for logout
+    backgroundColor: '#E91E63',
     paddingVertical: 15,
     borderRadius: 30,
     justifyContent: 'center',
@@ -255,3 +297,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+export default StartupDashboard;

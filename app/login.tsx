@@ -64,8 +64,34 @@ export default function LoginScreen() {
           await AsyncStorage.setItem('token', data.token);
           await AsyncStorage.setItem('userId', data.user.id.toString());  // Optionally save the user ID as string
 
-          // Redirect to role selection screen after successful login
-          router.replace('/roleSelection');  // This will redirect the user to the role selection screen
+          // Redirect based on user role after successful login
+          if (data.user.role === null) {
+            router.replace('/roleSelection');
+          } else if (data.user.role === 'investor') {
+            try {
+              const userId = data.user.id.toString();
+              const investorResponse = await fetch(`${API_IP}/api/investors/${userId}`, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${data.token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              if (investorResponse.ok) {
+                router.replace('/(dashboard)/InvestorDashboard');
+              } else {
+                router.replace('/ProfileSetting');
+              }
+            } catch (error) {
+              console.error("Investor check error:", error);
+              router.replace('/ProfileSetting');
+            }
+          } else if (data.user.role === 'startup') {
+            router.replace('/(dashboard)/StartupDashboard');
+          } else {
+            // Default fallback
+            router.replace('/roleSelection');
+          }
         }
       } catch (error) {
         console.error("Login error:", error);

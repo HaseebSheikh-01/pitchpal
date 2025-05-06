@@ -23,7 +23,7 @@ interface AddStartupFormProps {
 
 // Define countries by continent type
 type CountriesByContinent = {
-  [key: string]: string[]; // key is the continent, value is an array of country names
+  [key: string]: string[];
 };
 
 const industries = [
@@ -34,7 +34,6 @@ const stages = [
   'Seed', 'Bootstrap', 'Early Stage', 'Growth Stage', 'Late Stage'
 ];
 
-// Hardcoded country data for each continent (you can replace this with an API call if needed)
 const countriesByContinent: CountriesByContinent = {
   'North America': ['USA', 'Canada', 'Mexico'],
   'Europe': ['Germany', 'France', 'Italy', 'Spain', 'UK', 'Poland'],
@@ -189,7 +188,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
 
           {/* Continent Modal */}
           {showLocationModal && (
-            <View style={styles.modal}>
+            <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
                 <Text style={styles.title}>Select Continent</Text>
                 {Object.keys(countriesByContinent).map(continent => (
@@ -198,9 +197,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
                     style={styles.optionButton}
                     onPress={() => handleContinentSelection(continent)}
                   >
-                    <Text style={[styles.optionText, selectedContinent === continent && styles.optionTextSelected]}>
-                      {continent}
-                    </Text>
+                    <Text style={[styles.optionText, selectedContinent === continent && styles.optionTextSelected]}>{continent}</Text>
                   </TouchableOpacity>
                 ))}
                 <Button title="Close" onPress={() => setShowLocationModal(false)} color="#FF6347" />
@@ -208,7 +205,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
             </View>
           )}
 
-          {/* Country Text Input (User Enters Manually) */}
+          {/* Country Text Input */}
           <TextInput 
             placeholder="Enter Country Name" 
             value={country} 
@@ -224,7 +221,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
 
           {/* Stage Modal */}
           {showStageModal && (
-            <View style={styles.modal}>
+            <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
                 <Text style={styles.title}>Select Stage of Business</Text>
                 {stages.map(stage => (
@@ -251,7 +248,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
 
           {/* Industry Modal */}
           {showIndustryModal && (
-            <View style={styles.modal}>
+            <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
                 <Text style={styles.title}>Select Industry</Text>
                 {industries.map(industryOption => (
@@ -323,6 +320,17 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginHorizontal: 20
   },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   title: {
     fontSize: 26,
     fontWeight: '700',
@@ -341,11 +349,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingHorizontal: 15,
     width: '100%',
-  },
-  buttonsContainer: {
-    marginTop: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
   },
   dropdown: {
     borderWidth: 1,
@@ -393,12 +396,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderRadius: 10,
   },
-  modal: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  },
   optionButton: {
     padding: 15,
     borderBottomWidth: 1,
@@ -411,6 +408,11 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     fontWeight: 'bold',
     color: '#1DB954',
+  },
+  buttonsContainer: {
+    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 });
 

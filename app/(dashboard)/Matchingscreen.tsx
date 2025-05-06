@@ -76,7 +76,13 @@ export default function Matchingscreen() {
       
       const data = await response.json();
       const startupsData = Array.isArray(data) ? data : data.startups;
-      setStartups(startupsData.filter((s: Startup) => !swipedIds.includes(s.id)));
+      
+      const freshSwipedIds = await AsyncStorage.getItem('swipedStartups');
+      const parsedSwipedIds = freshSwipedIds ? JSON.parse(freshSwipedIds) : [];
+      
+      setStartups(startupsData.filter((s: Startup) => 
+        !parsedSwipedIds.includes(s.id)
+      ));
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch startups');
@@ -114,8 +120,35 @@ export default function Matchingscreen() {
     setSwipedIds(newSwipedIds);
     await AsyncStorage.setItem('swipedStartups', JSON.stringify(newSwipedIds));
 
+    // Increment startups viewed count
+    try {
+      const viewedCountStr = await AsyncStorage.getItem('startupsViewedCount');
+      const viewedCount = viewedCountStr ? parseInt(viewedCountStr, 10) : 0;
+      await AsyncStorage.setItem('startupsViewedCount', (viewedCount + 1).toString());
+    } catch (error) {
+      console.error('Error updating startups viewed count:', error);
+    }
+
     if (direction === 'right') {
       await saveStartup(swipedStartup);
+
+      // Increment startups saved count
+      try {
+        const savedCountStr = await AsyncStorage.getItem('startupsSavedCount');
+        const savedCount = savedCountStr ? parseInt(savedCountStr, 10) : 0;
+        await AsyncStorage.setItem('startupsSavedCount', (savedCount + 1).toString());
+      } catch (error) {
+        console.error('Error updating startups saved count:', error);
+      }
+
+      // Increment successful matches count (assuming right swipe means successful match)
+      try {
+        const matchedCountStr = await AsyncStorage.getItem('successfulMatchesCount');
+        const matchedCount = matchedCountStr ? parseInt(matchedCountStr, 10) : 0;
+        await AsyncStorage.setItem('successfulMatchesCount', (matchedCount + 1).toString());
+      } catch (error) {
+        console.error('Error updating successful matches count:', error);
+      }
     }
 
     setStartups(remaining);
@@ -179,7 +212,7 @@ export default function Matchingscreen() {
       const isTopCard = index === 0;
       const cardStyle = isTopCard ? 
         [styles.card, position.getLayout()] : 
-        [styles.card, { top: 10 * index }];
+        [styles.card, { zIndex: -index }];
 
       return (
         <Animated.View
@@ -271,6 +304,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 60,
   },
   card: {
@@ -286,6 +320,10 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
     padding: 20,
+    justifyContent: 'center', // Centers content inside the card
+    alignItems: 'center', // Centers content inside the card
+    top: (SCREEN_HEIGHT - SCREEN_HEIGHT * 0.65) / 3, // Vertically centers the top card
+    left: (SCREEN_WIDTH - SCREEN_WIDTH * 0.85) / 2, // Horizontally centers the top card
   },
   image: {
     width: '100%',

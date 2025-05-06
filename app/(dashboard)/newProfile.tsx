@@ -76,12 +76,8 @@ export default function ProfileSetting() {
   useEffect(() => {
     const fetchInvestorData = async () => {
       try {
-        console.log("Fetching investor data...");
         const userId = await AsyncStorage.getItem("userId");
         const token = await AsyncStorage.getItem("token");
-
-        console.log("User ID:", userId);
-        console.log("Token:", token);
 
         if (userId && token) {
           const response = await fetch(`${API_URL}/${userId}`, {
@@ -95,9 +91,8 @@ export default function ProfileSetting() {
           }
 
           const data = await response.json();
-          console.log("Fetched Investor Data:", data);
-
           const investor = data.investor;
+
           setName(investor.full_name);
           setEmail(investor.email);
           setCompany(investor.company);
@@ -107,8 +102,6 @@ export default function ProfileSetting() {
           setSelectedIndustries(investor.industry || []);
           setSelectedAreas(investor.area || []);
           setSelectedStartupTypes(investor.type_of_startup || []);
-        } else {
-          console.log("User ID or Token is missing");
         }
       } catch (error: unknown) {
         if (error instanceof Error) {
@@ -157,12 +150,9 @@ export default function ProfileSetting() {
     };
 
     try {
-      const userId = await AsyncStorage.getItem('userId');
       const token = await AsyncStorage.getItem('token');
-
-      console.log("Submitting Profile Data:", profileData);
-      const response = await fetch(`${API_IP}/api/investors/${userId}`, {
-        method: "PUT",
+      const response = await fetch(API_URL, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: token ? `Bearer ${token}` : '',
@@ -175,15 +165,13 @@ export default function ProfileSetting() {
       }
 
       const data = await response.json();
-      console.log("Profile updated successfully:", data);
-      Alert.alert("Success", data.message || "Your profile has been successfully updated.");
-
+      Alert.alert("Profile Submitted", data.message || "Your profile has been successfully submitted.");
       await AsyncStorage.setItem('profileData', JSON.stringify(profileData));
 
-      // Navigate to InvestorDashboard after successful profile update
+      // Navigate to InvestorDashboard after successful profile save
       router.push('/(dashboard)/InvestorDashboard');
+
     } catch (error: unknown) {
-      console.log("Profile update error:", error);
       if (error instanceof Error) {
         Alert.alert("Error", error.message || "There was an error submitting your profile.");
       } else {
@@ -194,10 +182,7 @@ export default function ProfileSetting() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.push('/InvestorDashboard')}>
-        <Text style={styles.backButtonText}>Back</Text>
-      </TouchableOpacity>
-
+      {/* Removed back button as per request */}
       <Text style={styles.title}>Profile Settings</Text>
 
       <Text style={styles.label}>Name</Text>
@@ -274,7 +259,7 @@ export default function ProfileSetting() {
         setSelectedOptions={setSelectedStartupTypes}
       />
 
-      <Button title="Update Profile" onPress={handleSubmit} />
+      <Button title="Save Profile" onPress={handleSubmit} />
     </ScrollView>
   );
 }

@@ -76,7 +76,7 @@ export default function SignupScreen() {
             name: formData.fullName,
             email: formData.email,
             password: formData.password,
-            role: "startup" // default role, or you can collect this later
+            role: "null" // default role, or you can collect this later
           })
         });
 

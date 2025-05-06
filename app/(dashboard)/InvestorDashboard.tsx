@@ -56,13 +56,24 @@ export default function InvestorDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    // Simulate fetching analytics data asynchronously
-    const fetchAnalytics = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setStats({ viewed: 120, saved: 45, matched: 10 });
+    // Fetch metrics from AsyncStorage
+    const fetchMetrics = async () => {
+      try {
+        const viewedStr = await AsyncStorage.getItem('startupsViewedCount');
+        const savedStr = await AsyncStorage.getItem('startupsSavedCount');
+        const matchedStr = await AsyncStorage.getItem('successfulMatchesCount');
+
+        const viewed = viewedStr ? parseInt(viewedStr, 10) : 0;
+        const saved = savedStr ? parseInt(savedStr, 10) : 0;
+        const matched = matchedStr ? parseInt(matchedStr, 10) : 0;
+
+        setStats({ viewed, saved, matched });
+      } catch (error) {
+        console.error('Error fetching metrics from AsyncStorage:', error);
+      }
     };
 
-    // Fetch userId from AsyncStorage and then fetch user data from API
+    // Fetch userId and username from AsyncStorage and API
     const fetchUserData = async () => {
       try {
         const userId = await AsyncStorage.getItem("userId");
@@ -95,7 +106,7 @@ export default function InvestorDashboard() {
       }
     };
 
-    fetchAnalytics();
+    fetchMetrics();
     fetchUserData();
   }, []);
 
@@ -274,7 +285,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderTopLeftRadius: 15,
     borderTopRightRadius: 15,
-  },
+    position: "absolute",  // Use absolute positioning
+    bottom: 30, // Adjust this value to move the nav bar lower or higher
+    left: 0,
+    right: 0,
+  }
+  ,
   navItem: {
     alignItems: "center",
   },
