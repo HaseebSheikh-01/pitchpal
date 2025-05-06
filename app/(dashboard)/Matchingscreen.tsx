@@ -1,9 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, Animated, PanResponder, TouchableOpacity, Alert, ActivityIndicator, ViewStyle } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Image, 
+  Dimensions, 
+  Animated, 
+  PanResponder, 
+  TouchableOpacity, 
+  Alert, 
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView
+} from 'react-native';
 import BottomNavBar from './BottomNavBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router'; // Import router from expo-router
+import { useRouter } from 'expo-router';
 import API_IP from '../../constants/apiConfig';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -16,112 +30,108 @@ type Startup = {
   description: string;
   industry: string;
   funding: string;
-  revenue_usd: number; // Added revenue field
+  revenue_usd: number;
   image: string;
 };
 
 export default function Matchingscreen() {
-  const [startups, setStartups] = useState<Startup[]>([]); 
+  const [startups, setStartups] = useState<Startup[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
-  const position = useRef(new Animated.ValueXY()).current;
+  const [swipedIds, setSwipedIds] = useState<string[]>([]);
   const [showEmoji, setShowEmoji] = useState<string | null>(null);
-  const router = useRouter(); // Use the router from expo-router
+  const position = useRef(new Animated.ValueXY()).current;
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    const fetchStartups = async () => {
+    const initialize = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
-        const userId = await AsyncStorage.getItem('userId');
-        const investorId = await AsyncStorage.getItem('investorId');
-        const token = await AsyncStorage.getItem('token');
-        const idToUse = investorId || userId;
-
-        if (!idToUse) {
-          setError('User identifier not found. Please login again.');
-          setLoading(false);
-          return;
-        }
-        const url = `${API_IP}/api/investors/${idToUse}/match`;
-        const response = await fetch(url, {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : '',
-          },
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setStartups(data);
-        } else if (data && Array.isArray(data.startups)) {
-          setStartups(data.startups);
-        } else {
-          setError('Unexpected data format received from server.');
-          setStartups([]);
-        }
-      } catch (err) {
-        setError('Failed to fetch matching startups. Please try again later.');
-      } finally {
-        setLoading(false);
+        const savedIds = await AsyncStorage.getItem('swipedStartups');
+        if (savedIds) setSwipedIds(JSON.parse(savedIds));
+        await fetchStartups();
+      } catch (error) {
+        console.error('Initialization error:', error);
+        setError('Failed to initialize');
       }
     };
-    fetchStartups();
+    initialize();
   }, []);
+
+  const fetchStartups = async () => {
+    try {
+      setLoading(true);
+      const userId = await AsyncStorage.getItem('userId');
+      const investorId = await AsyncStorage.getItem('investorId');
+      const token = await AsyncStorage.getItem('token');
+      const idToUse = investorId || userId;
+
+      if (!idToUse) throw new Error('User identifier missing');
+
+      const response = await fetch(`${API_IP}/api/investors/${idToUse}/match`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' },
+      });
+
+      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+      
+      const data = await response.json();
+      const startupsData = Array.isArray(data) ? data : data.startups;
+      setStartups(startupsData.filter((s: Startup) => !swipedIds.includes(s.id)));
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch startups');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onPanResponderMove: (_, gesture) => {
       position.setValue({ x: gesture.dx, y: gesture.dy });
-      if (gesture.dx > 0) {
-        setSwipeDirection('right');
-      } else if (gesture.dx < 0) {
-        setSwipeDirection('left');
-      }
     },
     onPanResponderRelease: (_, gesture) => {
-      if (gesture.dx > SWIPE_THRESHOLD) {
-        forceSwipe('right');
-      } else if (gesture.dx < -SWIPE_THRESHOLD) {
-        forceSwipe('left');
-      } else {
-        resetPosition();
-      }
+      if (gesture.dx > SWIPE_THRESHOLD) forceSwipe('right');
+      else if (gesture.dx < -SWIPE_THRESHOLD) forceSwipe('left');
+      else resetPosition();
     },
   });
 
   const forceSwipe = (direction: 'left' | 'right') => {
-    const x = direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH;
     Animated.timing(position, {
-      toValue: { x, y: 0 },
+      toValue: { x: direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH, y: 0 },
       duration: SWIPE_OUT_DURATION,
       useNativeDriver: false,
-    }).start(() => onSwipeComplete(direction));
+    }).start(() => handleSwipeComplete(direction));
     setShowEmoji(direction === 'right' ? '✅' : '❌');
   };
 
-  const onSwipeComplete = (direction: 'left' | 'right') => {
-    const [removedStartup, ...rest] = startups;
+  const handleSwipeComplete = async (direction: 'left' | 'right') => {
+    const [swipedStartup, ...remaining] = startups;
+    if (!swipedStartup) return;
+
+    const newSwipedIds = [...swipedIds, swipedStartup.id];
+    setSwipedIds(newSwipedIds);
+    await AsyncStorage.setItem('swipedStartups', JSON.stringify(newSwipedIds));
+
     if (direction === 'right') {
-      saveStartup(removedStartup); // Save matched startup to AsyncStorage
+      await saveStartup(swipedStartup);
     }
-    setStartups(rest);
+
+    setStartups(remaining);
     position.setValue({ x: 0, y: 0 });
-    setShowEmoji(null); // Hide emoji after swipe is complete
+    setShowEmoji(null);
   };
 
   const saveStartup = async (startup: Startup) => {
     try {
-      const savedStartups = await AsyncStorage.getItem('savedStartups');
-      const startups = savedStartups ? JSON.parse(savedStartups) : [];
+      const saved = await AsyncStorage.getItem('savedStartups');
+      const startups = saved ? JSON.parse(saved) : [];
       startups.push(startup);
       await AsyncStorage.setItem('savedStartups', JSON.stringify(startups));
-      Alert.alert('Startup Saved', `${startup.name} has been saved to your list.`);
+      Alert.alert('Saved', `${startup.name} added to favorites`);
     } catch (error) {
-      console.error('Error saving startup:', error);
+      console.error('Save error:', error);
     }
   };
 
@@ -130,7 +140,13 @@ export default function Matchingscreen() {
       toValue: { x: 0, y: 0 },
       useNativeDriver: false,
     }).start();
-    setShowEmoji(null); // Hide emoji on reset
+    setShowEmoji(null);
+  };
+
+  const handleResetSwipes = async () => {
+    await AsyncStorage.removeItem('swipedStartups');
+    setSwipedIds([]);
+    fetchStartups();
   };
 
   const renderStartups = () => {
@@ -154,58 +170,60 @@ export default function Matchingscreen() {
     if (startups.length === 0) {
       return (
         <View style={styles.noMoreCards}>
-          <Text style={styles.noMoreText}>No more startups</Text>
+          <Text style={styles.noMoreText}>No more startups to show</Text>
         </View>
       );
     }
 
     return startups.map((startup, index) => {
-      if (index === 0) {
-        return (
-          <Animated.View
-            key={startup.id}
-            style={[styles.card, position.getLayout()]}
-            {...panResponder.panHandlers}
-          >
-            <Image source={{ uri: startup.image }} style={styles.image} />
-            <View style={styles.cardDetails}>
-              <Text style={styles.name}>{startup.name}</Text>
-              <Text style={styles.description}>{startup.description}</Text>
-              <Text style={styles.industry}>{startup.industry}</Text>
-              <Text style={styles.funding}>Funding: {startup.funding}</Text>
-              <Text style={styles.revenue}>Revenue: ${startup.revenue_usd.toLocaleString()}</Text>
-              {/* Check Success Button */}
-              <TouchableOpacity style={styles.checkButton} onPress={() => Alert.alert('Check Success', `Checking success for ${startup.name}`)}>
-                <Text style={styles.checkButtonText}>Check Success</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        );
-      }
+      const isTopCard = index === 0;
+      const cardStyle = isTopCard ? 
+        [styles.card, position.getLayout()] : 
+        [styles.card, { top: 10 * index }];
+
       return (
-        <View key={startup.id} style={[styles.card, { top: 10 * index }]}>
-          <Image source={{ uri: startup.image }} style={styles.image} />
-          <View style={styles.cardDetails}>
+        <Animated.View
+          key={startup.id}
+          style={cardStyle}
+          {...(isTopCard ? panResponder.panHandlers : {})}
+        >
+          <Image 
+            source={{ uri: startup.image }} 
+            style={styles.image} 
+            resizeMode="cover"
+          />
+          <ScrollView contentContainerStyle={styles.cardDetails}>
             <Text style={styles.name}>{startup.name}</Text>
             <Text style={styles.description}>{startup.description}</Text>
             <Text style={styles.industry}>{startup.industry}</Text>
             <Text style={styles.funding}>Funding: {startup.funding}</Text>
             <Text style={styles.revenue}>Revenue: ${startup.revenue_usd.toLocaleString()}</Text>
-            {/* Check Success Button */}
-            <TouchableOpacity style={styles.checkButton} onPress={() => Alert.alert('Check Success', `Checking success for ${startup.name}`)}>
-              <Text style={styles.checkButtonText}>Check Success</Text>
+            <TouchableOpacity 
+              style={styles.checkButton} 
+              onPress={() => Alert.alert('Success Metrics', `Metrics for ${startup.name}`)}
+            >
+              <Text style={styles.checkButtonText}>View Metrics</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </ScrollView>
+        </Animated.View>
       );
     }).reverse();
   };
 
   return (
-    <View style={styles.container}>
-      {/* Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={() => router.push('/InvestorDashboard')}>
-        <Text style={styles.backButtonText}>Back</Text>
+    <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
+      <TouchableOpacity 
+        style={[styles.backButton, { top: insets.top + 16 }]} 
+        onPress={() => router.push('/InvestorDashboard')}
+      >
+        <Text style={styles.backButtonText}>‹ Back</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={[styles.resetButton, { top: insets.top + 16 }]} 
+        onPress={handleResetSwipes}
+      >
+        <Text style={styles.resetButtonText}>⟳ Reset Swipes</Text>
       </TouchableOpacity>
 
       <View style={styles.cardContainer}>{renderStartups()}</View>
@@ -214,9 +232,8 @@ export default function Matchingscreen() {
         {showEmoji && <Text style={styles.emoji}>{showEmoji}</Text>}
       </View>
 
-      {/* Pass style as a prop to BottomNavBar */}
-      <BottomNavBar selected="home" style={styles.bottomNavBar} />
-    </View>
+      <BottomNavBar selected="home" />
+    </SafeAreaView>
   );
 }
 
@@ -224,32 +241,43 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212',
-    paddingTop: 60,  // Adjust this to give margin to top
-    paddingHorizontal: 20,
-    justifyContent: 'center',
+    paddingHorizontal: 16,
   },
   backButton: {
     position: 'absolute',
-    top: 60,  // Added top margin to avoid overlap with cards
-    left: 20,
+    left: 16,
     padding: 10,
     backgroundColor: '#1E90FF',
     borderRadius: 5,
-    zIndex: 2,  // Ensures back button is above the cards
+    zIndex: 100,
   },
   backButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  resetButton: {
+    position: 'absolute',
+    right: 16,
+    backgroundColor: '#FF4757',
+    padding: 10,
+    borderRadius: 8,
+    zIndex: 100,
+  },
+  resetButtonText: {
+    color: 'white',
+    fontWeight: '600',
   },
   cardContainer: {
     flex: 1,
     justifyContent: 'center',
-    marginTop: 80,  // Added margin to avoid overlap with back button
+    marginTop: 60,
   },
   card: {
     position: 'absolute',
-    width: SCREEN_WIDTH * 0.9, // Make card width responsive
-    height: SCREEN_HEIGHT * 0.7, // Make card height responsive
+    width: SCREEN_WIDTH * 0.85,
+    height: SCREEN_HEIGHT * 0.65,
+    maxHeight: 600,
     borderRadius: 15,
     backgroundColor: '#1E1E1E',
     shadowColor: '#000',
@@ -261,40 +289,48 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 250,
+    height: SCREEN_HEIGHT * 0.3,
+    maxHeight: 300,
     borderRadius: 12,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   cardDetails: {
+    flex: 1,
     alignItems: 'center',
+    paddingBottom: 16,
   },
   name: {
-    fontSize: SCREEN_WIDTH * 0.08, // Adjust font size based on screen width
+    fontSize: 24,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 10,
+    textAlign: 'center',
   },
   description: {
     fontSize: 16,
     color: '#AAAAAA',
     marginBottom: 15,
+    textAlign: 'center',
   },
   industry: {
     fontSize: 18,
     color: '#FF6347',
     fontWeight: '600',
     marginBottom: 10,
+    textAlign: 'center',
   },
   funding: {
     fontSize: 20,
     color: '#1E90FF',
     fontWeight: '700',
+    textAlign: 'center',
   },
   revenue: {
     fontSize: 20,
     color: '#4CAF50',
     fontWeight: '700',
     marginTop: 5,
+    textAlign: 'center',
   },
   checkButton: {
     backgroundColor: '#FF9800',
@@ -347,8 +383,5 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#F72585',
     fontSize: 16,
-  },
-  bottomNavBar: {
-    marginBottom: 20,  // Add margin bottom to the bottom nav bar
   },
 });
