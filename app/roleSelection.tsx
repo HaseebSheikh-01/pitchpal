@@ -59,7 +59,7 @@ export default function RoleSelectionScreen() {
       if (selectedRole === 'startup') {
         router.push('/(dashboard)/StartupDashboard'); // Navigate to Startup Dashboard
       } else if (selectedRole === 'investor') {
-        router.push('/(dashboard)/InvestorDashboard'); // Navigate to Investor Dashboard
+        router.push('/(dashboard)/newProfile'); // Navigate to Investor Dashboard
       }
 
     } catch (error) {
@@ -83,7 +83,7 @@ export default function RoleSelectionScreen() {
             styles.roleButton, 
             selectedRole === 'investor' && styles.selectedRoleButton
           ]}
-          onPress={() => router.push('/(dashboard)/newProfile')}
+          onPress={() => handleRoleSelect('investor')} // Corrected here to set the role to 'investor'
         >
           <Text style={styles.roleButtonText}>🔵 I'm an Investor</Text>
           <Text style={styles.roleDescription}>Discover and invest in promising startups</Text>
@@ -94,7 +94,7 @@ export default function RoleSelectionScreen() {
             styles.roleButton, 
             selectedRole === 'startup' && styles.selectedRoleButton
           ]}
-          onPress={() => handleRoleSelect('startup')}
+          onPress={() => handleRoleSelect('startup')} // Corrected here to set the role to 'startup'
         >
           <Text style={styles.roleButtonText}>🟢 I'm a Startup</Text>
           <Text style={styles.roleDescription}>Pitch your startup and attract investors</Text>

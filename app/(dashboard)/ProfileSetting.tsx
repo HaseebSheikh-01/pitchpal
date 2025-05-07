@@ -2,21 +2,32 @@ import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity, Dimensions } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_IP from '../../constants/apiConfig';
-import { useRouter } from 'expo-router'; // Import router from expo-router
+import { useRouter } from 'expo-router';
 
-const API_URL = `${API_IP}/api/investors`; // Your API URL to fetch investor data
+const API_URL = `${API_IP}/api/investors`;
 
 const industries = [
   'Technology', 'Healthcare', 'Finance', 'Education', 'Energy', 'Retail', 'Manufacturing', 'Real Estate', 'AI & Machine Learning', 'E-commerce', 'Blockchain', 'Biotech'
-];
+] as const;
 
 const areas = [
   'North America', 'Europe', 'Asia', 'South America', 'Africa', 'Australia'
-];
+] as const;
 
 const startupTypes = [
   'Seed', 'Early Stage', 'Growth Stage', 'Late Stage'
-];
+] as const;
+
+type Industry = typeof industries[number];
+type Area = typeof areas[number];
+type StartupType = typeof startupTypes[number];
+
+interface MultiSelectDropdownProps {
+  label: string;
+  options: readonly string[];
+  selectedOptions: string[];
+  setSelectedOptions: React.Dispatch<React.SetStateAction<string[]>>;
+}
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -26,15 +37,10 @@ function MultiSelectDropdown({
   options,
   selectedOptions,
   setSelectedOptions,
-}: {
-  label: string;
-  options: string[];
-  selectedOptions: string[];
-  setSelectedOptions: (selected: string[]) => void;
-}) {
+}: MultiSelectDropdownProps) {
   const toggleOption = (option: string) => {
     if (selectedOptions.includes(option)) {
-      setSelectedOptions(selectedOptions.filter((item) => item !== option));
+      setSelectedOptions(selectedOptions.filter((item: string) => item !== option));
     } else {
       setSelectedOptions([...selectedOptions, option]);
     }
@@ -44,7 +50,7 @@ function MultiSelectDropdown({
     <View style={styles.multiSelectContainer}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.optionsContainer}>
-        {options.map((option) => (
+        {options.map((option: string) => (
           <TouchableOpacity
             key={option}
             style={[styles.optionButton, selectedOptions.includes(option) && styles.optionButtonSelected]}
@@ -61,27 +67,23 @@ function MultiSelectDropdown({
 }
 
 export default function ProfileSetting() {
-  const [name, setName] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [company, setCompany] = useState<string>("");
-  const [position, setPosition] = useState<string>("");
-  const [minInvestment, setMinInvestment] = useState<string>("1000");
-  const [maxInvestment, setMaxInvestment] = useState<string>("1000000");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
+  const [position, setPosition] = useState("");
+  const [minInvestment, setMinInvestment] = useState("1000");
+  const [maxInvestment, setMaxInvestment] = useState("1000000");
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [selectedStartupTypes, setSelectedStartupTypes] = useState<string[]>([]);
 
-  const router = useRouter(); // Use the router from expo-router
+  const router = useRouter();
 
   useEffect(() => {
     const fetchInvestorData = async () => {
       try {
-        console.log("Fetching investor data...");
         const userId = await AsyncStorage.getItem("userId");
         const token = await AsyncStorage.getItem("token");
-
-        console.log("User ID:", userId);
-        console.log("Token:", token);
 
         if (userId && token) {
           const response = await fetch(`${API_URL}/${userId}`, {
@@ -95,22 +97,33 @@ export default function ProfileSetting() {
           }
 
           const data = await response.json();
-          console.log("Fetched Investor Data:", data);
-
           const investor = data.investor;
+
           setName(investor.full_name);
           setEmail(investor.email);
           setCompany(investor.company);
           setPosition(investor.position);
           setMinInvestment(investor.funding_min.toString());
           setMaxInvestment(investor.funding_max.toString());
-          setSelectedIndustries(investor.industry || []);
-          setSelectedAreas(investor.area || []);
-          setSelectedStartupTypes(investor.type_of_startup || []);
+          setSelectedIndustries(
+            investor.industry
+              ? investor.industry.split(",").map((i: string) => i.trim()).filter((i: string) => i.length > 0)
+              : []
+          );
+          setSelectedAreas(
+            investor.area
+              ? investor.area.split(",").map((i: string) => i.trim()).filter((i: string) => i.length > 0)
+              : []
+          );
+          setSelectedStartupTypes(
+            investor.type_of_startup
+              ? investor.type_of_startup.split(",").map((i: string) => i.trim()).filter((i: string) => i.length > 0)
+              : []
+          );
         } else {
           console.log("User ID or Token is missing");
         }
-      } catch (error: unknown) {
+      } catch (error) {
         if (error instanceof Error) {
           console.error("Error fetching investor data:", error.message);
           Alert.alert("Error", `Failed to fetch investor data: ${error.message}`);
@@ -144,6 +157,7 @@ export default function ProfileSetting() {
       return;
     }
 
+    // Join into a string with commas (no spaces)
     const profileData = {
       full_name: name,
       email: email,
@@ -151,16 +165,18 @@ export default function ProfileSetting() {
       position,
       funding_min: minVal,
       funding_max: maxVal,
-      industry: selectedIndustries,
-      area: selectedAreas,
-      type_of_startup: selectedStartupTypes,
+      industry: selectedIndustries.join(","),
+      area: selectedAreas.join(","),
+      type_of_startup: selectedStartupTypes.join(","),
     };
+
+    console.log("Profile Data to Send:", profileData);
 
     try {
       const userId = await AsyncStorage.getItem('userId');
+      console.log("Updating profile for userId:", userId);
       const token = await AsyncStorage.getItem('token');
 
-      console.log("Submitting Profile Data:", profileData);
       const response = await fetch(`${API_IP}/api/investors/${userId}`, {
         method: "PUT",
         headers: {
@@ -171,6 +187,8 @@ export default function ProfileSetting() {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.log("Profile update failed with status:", response.status, "and message:", errorText);
         throw new Error("Profile submission failed");
       }
 
@@ -182,7 +200,7 @@ export default function ProfileSetting() {
 
       // Navigate to InvestorDashboard after successful profile update
       router.push('/(dashboard)/InvestorDashboard');
-    } catch (error: unknown) {
+    } catch (error) {
       console.log("Profile update error:", error);
       if (error instanceof Error) {
         Alert.alert("Error", error.message || "There was an error submitting your profile.");
@@ -284,29 +302,29 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#121212",
     flexGrow: 1,
-    paddingTop: 80, // Increased margin to ensure proper spacing
+    paddingTop: 80,
   },
   backButton: {
     position: 'absolute',
-    top: 40, // Adjusted top margin to avoid notch area
+    top: 40,
     left: 20,
     padding: 10,
     backgroundColor: '#1E90FF',
-    borderRadius: 30,  // Rounded corners
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 100, // Adjusted width for back button
-    height: 40, // Adjusted height for back button
+    width: 100,
+    height: 40,
   },
   backButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
   },
   title: {
-    fontSize: SCREEN_WIDTH * 0.08, // Responsive title font size
+    fontSize: SCREEN_WIDTH * 0.08,
     fontWeight: "bold",
     color: "#FFFFFF",
-    textAlign: 'center', // Center the title
+    textAlign: 'center',
     marginBottom: 20,
   },
   label: {
@@ -319,7 +337,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     padding: 10,
     borderRadius: 8,
-    width: "100%", // Full width input field
+    width: "100%",
   },
   rangeInputContainer: {
     flexDirection: "row",
@@ -332,7 +350,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     padding: 10,
     borderRadius: 8,
-    width: "45%", // Adjust width for inputs
+    width: "45%",
   },
   multiSelectContainer: {
     marginTop: 15,

@@ -303,8 +303,8 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', // Centers the cards vertically
+    alignItems: 'center', // Centers the cards horizontally
     marginTop: 60,
   },
   card: {
@@ -322,8 +322,7 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: 'center', // Centers content inside the card
     alignItems: 'center', // Centers content inside the card
-    top: (SCREEN_HEIGHT - SCREEN_HEIGHT * 0.65) / 3, // Vertically centers the top card
-    left: (SCREEN_WIDTH - SCREEN_WIDTH * 0.85) / 2, // Horizontally centers the top card
+    // Remove the top and left position, rely on flexbox for centering
   },
   image: {
     width: '100%',
