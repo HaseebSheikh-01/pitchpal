@@ -17,6 +17,7 @@ interface AddStartupFormProps {
     industry: string;
     team_size: number;
     revenue_usd: number;
+    consumer_base: number; // New field for consumer base
     image: string | null; // New photo field
   }) => void;
 }
@@ -53,9 +54,9 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
   const [industry, setIndustry] = useState('');
   const [team_size, setTeamSize] = useState('');
   const [revenue_usd, setRevenueUsd] = useState('');
+  const [consumer_base, setConsumerBase] = useState(''); // New state for consumer base
   const [image, setImage] = useState<string | null>(null);
 
-  // Add missing modal and selection states
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showIndustryModal, setShowIndustryModal] = useState(false);
   const [showStageModal, setShowStageModal] = useState(false);
@@ -99,6 +100,10 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
       alert('Please enter the revenue.');
       return;
     }
+    if (!consumer_base.trim()) {
+      alert('Please enter the consumer base.');
+      return; // Ensure consumer base is filled
+    }
     onAddStartup({
       name,
       funding_total_usd: Number(funding_total_usd),
@@ -109,6 +114,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
       industry,
       team_size: Number(team_size),
       revenue_usd: Number(revenue_usd),
+      consumer_base: Number(consumer_base), // Pass consumer base
       image,
     });
     onClose();
@@ -141,7 +147,6 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
       quality: 1,
     });
 
-    // Fix for "cancelled" property and "uri" property type checking
     if (result && result.assets && result.assets[0]) {
       const { uri } = result.assets[0]; // Get uri from result
       setImage(uri); // Set the photo URI
@@ -230,9 +235,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
                     style={styles.optionButton}
                     onPress={() => handleSelection(stage, 'stage')}
                   >
-                    <Text style={[styles.optionText, stage_of_business === stage && styles.optionTextSelected]}>
-                      {stage}
-                    </Text>
+                    <Text style={[styles.optionText, stage_of_business === stage && styles.optionTextSelected]}>{stage}</Text>
                   </TouchableOpacity>
                 ))}
                 <Button title="Close" onPress={() => setShowStageModal(false)} color="#FF6347" />
@@ -257,9 +260,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
                     style={styles.optionButton}
                     onPress={() => handleSelection(industryOption, 'industry')}
                   >
-                    <Text style={[styles.optionText, industry === industryOption && styles.optionTextSelected]}>
-                      {industryOption}
-                    </Text>
+                    <Text style={[styles.optionText, industry === industryOption && styles.optionTextSelected]}>{industryOption}</Text>
                   </TouchableOpacity>
                 ))}
                 <Button title="Close" onPress={() => setShowIndustryModal(false)} color="#FF6347" />
@@ -284,7 +285,16 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
             style={styles.input} 
             keyboardType="numeric"
           />
-          
+
+          {/* Consumer Base */}
+          <TextInput 
+            placeholder="Consumer Base (Number of customers)" 
+            value={consumer_base} 
+            onChangeText={setConsumerBase} 
+            style={styles.input} 
+            keyboardType="numeric"
+          />
+
           {/* Photo Upload */}
           <TouchableOpacity onPress={pickImage} style={styles.uploadButton}>
             <Text style={styles.uploadButtonText}>Upload Photo</Text>
@@ -318,16 +328,16 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#121212',
     borderRadius: 15,
-    marginHorizontal: 20
+    marginHorizontal: 20,
   },
-  modalOverlay: {
+  modalOverlay: {  // Add this style definition
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    zIndex: 999,
+    zIndex: 999, // Ensure the overlay is on top
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -336,7 +346,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 20
+    marginBottom: 20,
   },
   input: {
     borderWidth: 1,
@@ -415,5 +425,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 });
+
 
 export default AddStartupForm;
