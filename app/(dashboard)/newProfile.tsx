@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity, Dimensions } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_IP from '../../constants/apiConfig';
@@ -72,50 +72,6 @@ export default function ProfileSetting() {
   const [selectedStartupTypes, setSelectedStartupTypes] = useState<string[]>([]);
 
   const router = useRouter(); // Use the router from expo-router
-
-  useEffect(() => {
-    const fetchInvestorData = async () => {
-      try {
-        const userId = await AsyncStorage.getItem("userId");
-        const token = await AsyncStorage.getItem("token");
-
-        if (userId && token) {
-          const response = await fetch(`${API_URL}/${userId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to fetch investor data: ${response.statusText}`);
-          }
-
-          const data = await response.json();
-          const investor = data.investor;
-
-          setName(investor.full_name);
-          setEmail(investor.email);
-          setCompany(investor.company);
-          setPosition(investor.position);
-          setMinInvestment(investor.funding_min.toString());
-          setMaxInvestment(investor.funding_max.toString());
-          setSelectedIndustries(investor.industry || []);
-          setSelectedAreas(investor.area || []);
-          setSelectedStartupTypes(investor.type_of_startup || []);
-        }
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          console.error("Error fetching investor data:", error.message);
-          Alert.alert("Error", `Failed to fetch investor data: ${error.message}`);
-        } else {
-          console.error("Unexpected error:", error);
-          Alert.alert("Error", "An unexpected error occurred.");
-        }
-      }
-    };
-
-    fetchInvestorData();
-  }, []);
 
   const handleSubmit = async () => {
     const minVal = parseInt(minInvestment, 10);

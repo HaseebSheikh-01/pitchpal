@@ -1,28 +1,63 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Animated } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Animated, ActivityIndicator, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
+import API_IP from '../../constants/apiConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Define the type for the news data
-interface NewsItem {
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+// Define the type for the startup data
+interface Startup {
   id: number;
-  title: string;
+  name: string;
   description: string;
-  link: string;
+  stage_of_business: string;
+  industry?: string;
+  funding?: string;
+  revenue_usd?: number;
+  image?: string;
 }
 
 export default function Discover() {
   const router = useRouter();
-  const [newsData, setNewsData] = useState<NewsItem[]>([]);  // Define state type
+  const [startups, setStartups] = useState<Startup[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [pressedId, setPressedId] = useState<number | null>(null);
 
-  // Fetch dummy data for news (replace with actual API later)
+  // Fetch startups from the API
   useEffect(() => {
-    // This is dummy data, you can replace it with a real API call
-    setNewsData([
-      { id: 1, title: "New Startup X Launches", description: "This is the description for Startup X", link: "https://www.example.com" },
-      { id: 2, title: "Investment Opportunities in Y", description: "Learn about exciting investment opportunities.", link: "https://www.example.com" },
-      { id: 3, title: "Innovative Solutions by Z", description: "Z is changing the game with its new approach.", link: "https://www.example.com" },
-    ]);
+    const fetchStartups = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (!token) {
+          setError("No authentication token found.");
+          setLoading(false);
+          return;
+        }
+        const res = await fetch(`${API_IP}/api/startups/stage/early-or-seed`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        console.log("API response:", data);
+        if (Array.isArray(data)) {
+          setStartups(data);
+        } else if (data && Array.isArray(data.startups)) {
+          setStartups(data.startups);
+        } else {
+          setError("Unexpected API response format.");
+        }
+      } catch (err) {
+        console.error('Failed to fetch startups:', err);
+        setError("Failed to fetch startups.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStartups();
   }, []);
 
   // Animation for press effect
@@ -32,33 +67,49 @@ export default function Discover() {
   return (
     <View style={styles.container}>
       {/* Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={() => router.push("/InvestorDashboard")}>
-        <Text style={styles.backButtonText}>Back to Dashboard</Text>
+      <TouchableOpacity style={styles.backButton} onPress={() => router.push("/InvestorDashboard")}> 
+        <Text style={styles.backButtonText}>‹ Back</Text>
       </TouchableOpacity>
 
       <Text style={styles.title}>Discover Startups</Text>
-      <Text style={styles.description}>Here you can discover new startups...</Text>
+      <Text style={styles.description}>Here you can discover new early stage or seed startups...</Text>
 
-      {/* News cards */}
-      <ScrollView contentContainerStyle={styles.newsContainer} showsVerticalScrollIndicator={false}>
-        {newsData.map((item) => (
-          <Animated.View
-            key={item.id}
-            style={[styles.card, pressedId === item.id && styles.cardPressed]} // Animation when card is pressed
-          >
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardDescription}>{item.description}</Text>
-            <TouchableOpacity
-              style={styles.cardButton}
-              onPressIn={() => pressIn(item.id)}  // Add press effect
-              onPressOut={pressOut}  // Remove press effect
-              onPress={() => Linking.openURL(item.link)}
-            >
-              <Text style={styles.cardButtonText}>Read More</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ))}
-      </ScrollView>
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1DB954" />
+          <Text style={styles.loadingText}>Loading startups...</Text>
+        </View>
+      )}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
+      {!loading && !error && (
+        <ScrollView contentContainerStyle={styles.cardContainer} showsVerticalScrollIndicator={false}>
+          {startups.length === 0 ? (
+            <Text style={styles.noMoreText}>No startups found.</Text>
+          ) : (
+            startups.map((startup) => (
+              <Animated.View
+                key={startup.id}
+                style={[styles.card, pressedId === startup.id && styles.cardPressed]}
+                onTouchStart={() => pressIn(startup.id)}
+                onTouchEnd={pressOut}
+              >
+                {/* You can add an Image here if you want: startup.image */}
+                <Text style={styles.name}>{startup.name}</Text>
+                <Text style={styles.cardDescription}>{startup.description}</Text>
+                {startup.industry && <Text style={styles.industry}>{startup.industry}</Text>}
+                <Text style={styles.stage}>Stage: {startup.stage_of_business}</Text>
+                {startup.funding && <Text style={styles.funding}>Funding: ${startup.funding}</Text>}
+                {typeof startup.revenue_usd === 'number' && <Text style={styles.revenue}>Revenue: ${startup.revenue_usd.toLocaleString()}</Text>}
+              </Animated.View>
+            ))
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -76,14 +127,15 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "700",
     color: "#FFFFFF",
-    marginBottom: 20,
+    marginTop: 60,
+    marginBottom: 10,
     textAlign: "center",
   },
   description: {
     fontSize: 18,
     color: "#D3D3D3",
     textAlign: "center",
-    marginBottom: 30,
+    marginBottom: 20,
   },
   backButton: {
     position: "absolute",
@@ -103,7 +155,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
   },
-  newsContainer: {
+  cardContainer: {
     width: "100%",
     paddingBottom: 20,
     alignItems: "center",
@@ -113,8 +165,8 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 20,
     marginBottom: 25,
-    width: "100%",
-    maxWidth: 600,
+    width: SCREEN_WIDTH * 0.85,
+    maxHeight: 600,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -125,34 +177,67 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],  // Scale down the card when pressed
     backgroundColor: "#333333", // Change color on press
   },
-  cardTitle: {
-    fontSize: 22,
+  name: {
+    fontSize: 24,
     fontWeight: "600",
     color: "#FFFFFF",
     marginBottom: 10,
   },
   cardDescription: {
     fontSize: 16,
-    color: "#A9A9A9",
+    color: '#A9A9A9',
     marginBottom: 15,
   },
-  cardButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: "#1E90FF",
-    borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
+  industry: {
+    fontSize: 18,
+    color: "#FF6347",
+    fontWeight: "600",
+    marginBottom: 10,
+    textAlign: "center",
   },
-  cardButtonText: {
-    color: "#FFFFFF",
+  stage: {
     fontSize: 16,
-    fontWeight: "500",
+    color: "#1DB954",
+    fontWeight: "600",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  funding: {
+    fontSize: 20,
+    color: "#1E90FF",
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  revenue: {
+    fontSize: 20,
+    color: "#4CAF50",
+    fontWeight: "700",
+    marginTop: 5,
+    textAlign: "center",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    color: "#1DB954",
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    color: "#F72585",
+    fontSize: 16,
+  },
+  noMoreText: {
+    fontSize: 18,
+    color: "#FFFFFF",
+    marginTop: 40,
+    textAlign: "center",
   },
 });

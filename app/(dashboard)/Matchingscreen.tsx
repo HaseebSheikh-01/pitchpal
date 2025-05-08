@@ -34,12 +34,26 @@ type Startup = {
   image: string;
 };
 
+// Helper function to increment a count in AsyncStorage
+const incrementAsyncStorageCount = async (key: string) => {
+  try {
+    const current = await AsyncStorage.getItem(key);
+    const next = current ? parseInt(current, 10) + 1 : 1;
+    await AsyncStorage.setItem(key, next.toString());
+  } catch (e) {
+    console.error('Failed to increment', key, e);
+  }
+};
+
 export default function Matchingscreen() {
   const [startups, setStartups] = useState<Startup[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [swipedIds, setSwipedIds] = useState<string[]>([]);
+  const [swipedIds, setSwipedIds] = useState<string[]>([]); 
   const [showEmoji, setShowEmoji] = useState<string | null>(null);
+  const [popupVisible, setPopupVisible] = useState(false); // State to control popup visibility
+  const [popupMessage, setPopupMessage] = useState(''); // State for the popup message
+  const [metricsClicked, setMetricsClicked] = useState<Set<string>>(new Set()); // Track metrics button click
   const position = useRef(new Animated.ValueXY()).current;
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -68,19 +82,25 @@ export default function Matchingscreen() {
 
       if (!idToUse) throw new Error('User identifier missing');
 
+      // Only fetch matched startups
       const response = await fetch(`${API_IP}/api/investors/${idToUse}/match`, {
         headers: { Authorization: token ? `Bearer ${token}` : '' },
       });
 
       if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-      
       const data = await response.json();
       const startupsData = Array.isArray(data) ? data : data.startups;
-      
+
       const freshSwipedIds = await AsyncStorage.getItem('swipedStartups');
       const parsedSwipedIds = freshSwipedIds ? JSON.parse(freshSwipedIds) : [];
-      
-      setStartups(startupsData.filter((s: Startup) => 
+
+      // Map funding_total_usd to funding string for display
+      const mappedStartups = startupsData.map((s: any) => ({
+        ...s,
+        funding: s.funding_total_usd ? `$${s.funding_total_usd.toLocaleString()}` : 'N/A',
+      }));
+
+      setStartups(mappedStartups.filter((s: Startup) => 
         !parsedSwipedIds.includes(s.id)
       ));
 
@@ -120,35 +140,10 @@ export default function Matchingscreen() {
     setSwipedIds(newSwipedIds);
     await AsyncStorage.setItem('swipedStartups', JSON.stringify(newSwipedIds));
 
-    // Increment startups viewed count
-    try {
-      const viewedCountStr = await AsyncStorage.getItem('startupsViewedCount');
-      const viewedCount = viewedCountStr ? parseInt(viewedCountStr, 10) : 0;
-      await AsyncStorage.setItem('startupsViewedCount', (viewedCount + 1).toString());
-    } catch (error) {
-      console.error('Error updating startups viewed count:', error);
-    }
-
+    // Save the startup immediately when the user swipes right
     if (direction === 'right') {
-      await saveStartup(swipedStartup);
-
-      // Increment startups saved count
-      try {
-        const savedCountStr = await AsyncStorage.getItem('startupsSavedCount');
-        const savedCount = savedCountStr ? parseInt(savedCountStr, 10) : 0;
-        await AsyncStorage.setItem('startupsSavedCount', (savedCount + 1).toString());
-      } catch (error) {
-        console.error('Error updating startups saved count:', error);
-      }
-
-      // Increment successful matches count (assuming right swipe means successful match)
-      try {
-        const matchedCountStr = await AsyncStorage.getItem('successfulMatchesCount');
-        const matchedCount = matchedCountStr ? parseInt(matchedCountStr, 10) : 0;
-        await AsyncStorage.setItem('successfulMatchesCount', (matchedCount + 1).toString());
-      } catch (error) {
-        console.error('Error updating successful matches count:', error);
-      }
+      await saveStartup(swipedStartup); // Save startup on right swipe
+      await incrementAsyncStorageCount('successfulMatchesCount'); // Increment matches count
     }
 
     setStartups(remaining);
@@ -162,6 +157,7 @@ export default function Matchingscreen() {
       const startups = saved ? JSON.parse(saved) : [];
       startups.push(startup);
       await AsyncStorage.setItem('savedStartups', JSON.stringify(startups));
+      await incrementAsyncStorageCount('startupsSavedCount'); // Increment saved count
       Alert.alert('Saved', `${startup.name} added to favorites`);
     } catch (error) {
       console.error('Save error:', error);
@@ -180,6 +176,28 @@ export default function Matchingscreen() {
     await AsyncStorage.removeItem('swipedStartups');
     setSwipedIds([]);
     fetchStartups();
+  };
+
+  const handleMetricsClick = (startup: Startup) => {
+    // Prevent multiple clicks on the same startup card
+    if (metricsClicked.has(startup.id)) {
+      return; // Do nothing if the button has already been clicked
+    }
+
+    setPopupMessage("The model is working");
+    setPopupVisible(true);
+
+    // Simulate the model working for 1.5 seconds
+    setTimeout(() => {
+      const randomSuccessProbability = (Math.random() * (0.80 - 0.30) + 0.30).toFixed(2);
+      setPopupMessage(`Success Probability: ${randomSuccessProbability}`);
+
+      // Save the startup after showing the probability (if not already saved by swipe)
+      saveStartup(startup);
+    }, 1500);
+
+    // Mark the startup as clicked (disable button for this startup)
+    setMetricsClicked(prev => new Set(prev).add(startup.id));
   };
 
   const renderStartups = () => {
@@ -233,7 +251,8 @@ export default function Matchingscreen() {
             <Text style={styles.revenue}>Revenue: ${startup.revenue_usd.toLocaleString()}</Text>
             <TouchableOpacity 
               style={styles.checkButton} 
-              onPress={() => Alert.alert('Success Metrics', `Metrics for ${startup.name}`)}
+              onPress={() => handleMetricsClick(startup)} // Call to fetch metrics and save startup
+              disabled={metricsClicked.has(startup.id)} // Disable button if already clicked
             >
               <Text style={styles.checkButtonText}>View Metrics</Text>
             </TouchableOpacity>
@@ -242,6 +261,13 @@ export default function Matchingscreen() {
       );
     }).reverse();
   };
+
+  // In renderStartups, increment 'startupsViewedCount' when a new card is shown
+  useEffect(() => {
+    if (startups.length > 0) {
+      incrementAsyncStorageCount('startupsViewedCount');
+    }
+  }, [startups.length]);
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
@@ -260,6 +286,20 @@ export default function Matchingscreen() {
       </TouchableOpacity>
 
       <View style={styles.cardContainer}>{renderStartups()}</View>
+
+      {popupVisible && (
+        <View style={styles.popupContainer}>
+          <View style={styles.popup}>
+            <Text style={styles.popupText}>{popupMessage}</Text>
+            <TouchableOpacity 
+              style={styles.popupCloseButton} 
+              onPress={() => setPopupVisible(false)}
+            >
+              <Text style={styles.popupCloseButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <View style={styles.emojiContainer}>
         {showEmoji && <Text style={styles.emoji}>{showEmoji}</Text>}
@@ -303,8 +343,8 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     flex: 1,
-    justifyContent: 'center', // Centers the cards vertically
-    alignItems: 'center', // Centers the cards horizontally
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 60,
   },
   card: {
@@ -320,9 +360,8 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
     padding: 20,
-    justifyContent: 'center', // Centers content inside the card
-    alignItems: 'center', // Centers content inside the card
-    // Remove the top and left position, rely on flexbox for centering
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   image: {
     width: '100%',
@@ -420,5 +459,39 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#F72585',
     fontSize: 16,
+  },
+  // Styles for popup
+  popupContainer: {
+    position: 'absolute',
+    top: '25%',
+    left: '45%',  // Adjusted left position to move it to the left a bit
+    transform: [{ translateX: -120 }, { translateY: -100 }],  // Move horizontally and vertically
+    backgroundColor: '#000000',
+    borderRadius: 12,
+    padding: 20,
+    zIndex: 101,
+    elevation: 5,
+  },
+  popup: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+  },
+  popupText: {
+    fontSize: 18,
+    color: '#333333',
+    fontWeight: 'bold', // Added bold text
+    textAlign: 'center',
+  },
+  popupCloseButton: {
+    backgroundColor: '#FF4757',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  popupCloseButtonText: {
+    color: 'white',
+    fontWeight: '600',
   },
 });

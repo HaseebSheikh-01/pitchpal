@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router'; // Import router
 
 interface Startup {
-  id: string; // Ensure id is part of the startup type
+  id: string;
   name: string;
   funding_total_usd: number;
   funding_rounds: number;
@@ -19,6 +19,21 @@ interface Startup {
   industry: string;
   team_size: number;
   revenue_usd: number;
+  consumer_base: number;
+  image: string | null;
+}
+
+interface AddStartupData {
+  name: string;
+  funding_total_usd: number;
+  funding_rounds: number;
+  continent: string;
+  country: string;
+  stage_of_business: string;
+  industry: string;
+  team_size: number;
+  revenue_usd: number;
+  consumer_base: number;
   image: string | null;
 }
 
@@ -32,52 +47,54 @@ const StartupDashboard: React.FC = () => {
 
   const router = useRouter(); // Router instance for navigation
 
+  const fetchStartups = async () => {
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      const token = await AsyncStorage.getItem('token');
+      if (!userId) {
+        Alert.alert('Error', 'User ID not found. Please login again.');
+        return;
+      }
+      if (!token) {
+        Alert.alert('Error', 'Authentication token not found. Please login again.');
+        return;
+      }
+      const response = await fetch(`${API_IP}/api/startups`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Fetched startups data:', data);
+      if (data && Array.isArray(data.startups)) {
+        const normalizedStartups = data.startups.map((startup: any) => ({
+          ...startup,
+          funding_total_usd: Number(startup.funding_total_usd) || 0,
+          funding_rounds: Number(startup.funding_rounds) || 0,
+          team_size: Number(startup.team_size) || 0,
+          revenue_usd: Number(startup.revenue_usd) || 0,
+          consumer_base: Number(startup.consumer_base) || 0,
+        }));
+        setStartups(normalizedStartups);
+      } else {
+        console.warn('API response does not contain startups array:', data);
+        setStartups([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch startups:', error);
+      Alert.alert('Error', 'Failed to fetch startups. Please try again later.');
+    }
+  };
+
   useEffect(() => {
     setIsMounted(true);
-    const fetchStartups = async () => {
-      try {
-        const userId = await AsyncStorage.getItem('userId');
-        const token = await AsyncStorage.getItem('token');
-        if (!userId) {
-          Alert.alert('Error', 'User ID not found. Please login again.');
-          return;
-        }
-        if (!token) {
-          Alert.alert('Error', 'Authentication token not found. Please login again.');
-          return;
-        }
-        const response = await fetch(`${API_IP}/api/startups`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log('Fetched startups data:', data);
-        if (data && Array.isArray(data.startups)) {
-          const normalizedStartups = data.startups.map((startup: any) => ({
-            ...startup,
-            funding_total_usd: Number(startup.funding_total_usd) || 0,
-            funding_rounds: Number(startup.funding_rounds) || 0,
-            team_size: Number(startup.team_size) || 0,
-            revenue_usd: Number(startup.revenue_usd) || 0,
-          }));
-          setStartups(normalizedStartups);
-        } else {
-          console.warn('API response does not contain startups array:', data);
-          setStartups([]);
-        }
-      } catch (error) {
-        console.error('Failed to fetch startups:', error);
-        Alert.alert('Error', 'Failed to fetch startups. Please try again later.');
-      }
-    };
     fetchStartups();
   }, []);
 
-  const addStartup = async (startup: Startup) => {
+  const addStartup = async (startupData: AddStartupData) => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
@@ -90,13 +107,12 @@ const StartupDashboard: React.FC = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(startup),
+        body: JSON.stringify(startupData),
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const savedStartup = await response.json();
-      setStartups((prev) => [...prev, savedStartup]);
+      await fetchStartups(); // Refresh the startups list after adding
       setAddModalVisible(false);
       setSnackbarVisible(true);
       setTimeout(() => setSnackbarVisible(false), 2000);
@@ -124,12 +140,7 @@ const StartupDashboard: React.FC = () => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const updatedData = await response.json();
-      setStartups((prev) =>
-        prev.map((startup) =>
-          startup.id === updatedData.id ? updatedData : startup
-        )
-      );
+      await fetchStartups(); // Refresh the startups list after updating
       setUpdateModalVisible(false);
       setSnackbarVisible(true);
       setTimeout(() => setSnackbarVisible(false), 2000);
@@ -186,15 +197,18 @@ const StartupDashboard: React.FC = () => {
       )}
 
       {/* Add Startup Form Modal */}
-      <AddStartupForm visible={isAddModalVisible} onClose={() => setAddModalVisible(false)} onAddStartup={addStartup} />
+      <AddStartupForm 
+        visible={isAddModalVisible} 
+        onClose={() => setAddModalVisible(false)} 
+        onAddStartup={addStartup} 
+      />
 
       {/* Update Startup Form Modal */}
       {selectedStartup && (
         <EditStartupForm
           visible={isUpdateModalVisible}
           onClose={() => setUpdateModalVisible(false)}
-          onUpdateStartup={updateStartup} 
-          startup={selectedStartup} 
+          startup={selectedStartup}
         />
       )}
 
