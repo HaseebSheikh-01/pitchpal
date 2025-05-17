@@ -7,6 +7,8 @@ import { MaterialIcons } from '@expo/vector-icons'; // For the update icon
 import API_IP from '../../constants/apiConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router'; // Import router
+import ToDoList from './ToDoList';
+import ProgressTracker from './ProgressTracker';
 
 interface Startup {
   id: string;
@@ -44,6 +46,7 @@ const StartupDashboard: React.FC = () => {
   const [startups, setStartups] = useState<Startup[]>([]);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [currentPage, setCurrentPage] = useState('home');
 
   const router = useRouter(); // Router instance for navigation
 
@@ -152,7 +155,8 @@ const StartupDashboard: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.clear();
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('userId');
       Alert.alert('Logged Out', 'You have successfully logged out.');
       router.push('/login'); 
     } catch (error) {
@@ -160,41 +164,63 @@ const StartupDashboard: React.FC = () => {
     }
   };
 
+  const renderContent = () => {
+    if (currentPage === 'home') {
+      return (
+        <>
+          <Text style={styles.title}>Startup Dashboard</Text>
+          <Text style={styles.welcomeText}>
+            Welcome to your startup dashboard! Here you can manage your startup profiles and connect with investors.
+          </Text>
+
+          <TouchableOpacity style={styles.addButton} onPress={() => setAddModalVisible(true)}>
+            <Text style={styles.buttonText}>Add Startup</Text>
+          </TouchableOpacity>
+
+          {startups.length === 0 ? (
+            <Text style={styles.emptyState}>No startups added yet. Tap "Add Startup" to get started.</Text>
+          ) : (
+            <ScrollView style={{ marginTop: 20 }}>
+              {startups.map((startup, index) => (
+                <View key={index} style={styles.card}>
+                  <Text style={styles.cardTitle}>{startup.name}</Text>
+                  <Text style={styles.cardText}>Industry: {startup.industry}</Text>
+                  <Text style={styles.cardText}>Funding: ${Number(startup.funding_total_usd || 0).toLocaleString()}</Text>
+                  <Text style={styles.cardText}>Location: {startup.continent}, {startup.country}</Text>
+
+                  <TouchableOpacity
+                    style={styles.updateButton}
+                    onPress={() => {
+                      setSelectedStartup(startup);
+                      setUpdateModalVisible(true);
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+
+          {/* Logout Button - Only visible on home page */}
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <MaterialIcons name="logout" size={20} color="white" style={{ marginRight: 8 }} />
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+        </>
+      );
+    } else if (currentPage === 'todo') {
+      return <ToDoList />;
+    } else if (currentPage === 'progress') {
+      return <ProgressTracker />;
+    } else {
+      return null;
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Startup Dashboard</Text>
-      <Text style={styles.welcomeText}>
-        Welcome to your startup dashboard! Here you can manage your startup profiles and connect with investors.
-      </Text>
-
-      <TouchableOpacity style={styles.addButton} onPress={() => setAddModalVisible(true)}>
-        <Text style={styles.buttonText}>Add Startup</Text>
-      </TouchableOpacity>
-
-      {startups.length === 0 ? (
-        <Text style={styles.emptyState}>No startups added yet. Tap "Add Startup" to get started.</Text>
-      ) : (
-        <ScrollView style={{ marginTop: 20 }}>
-          {startups.map((startup, index) => (
-            <View key={index} style={styles.card}>
-              <Text style={styles.cardTitle}>{startup.name}</Text>
-              <Text style={styles.cardText}>Industry: {startup.industry}</Text>
-              <Text style={styles.cardText}>Funding: ${Number(startup.funding_total_usd || 0).toLocaleString()}</Text>
-              <Text style={styles.cardText}>Location: {startup.continent}, {startup.country}</Text>
-
-              <TouchableOpacity
-                style={styles.updateButton}
-                onPress={() => {
-                  setSelectedStartup(startup); // Set selected startup for update
-                  setUpdateModalVisible(true); // Open the update modal
-                }}
-              >
-                <Text style={styles.buttonText}>Edit</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      )}
+      {renderContent()}
 
       {/* Add Startup Form Modal */}
       <AddStartupForm 
@@ -212,11 +238,30 @@ const StartupDashboard: React.FC = () => {
         />
       )}
 
-      {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <MaterialIcons name="logout" size={20} color="white" style={{ marginRight: 8 }} />
-        <Text style={styles.logoutButtonText}>Logout</Text>
-      </TouchableOpacity>
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity 
+          style={[styles.navItem, currentPage === 'home' && styles.activeNavItem]} 
+          onPress={() => setCurrentPage('home')}
+        >
+          <MaterialIcons name="home" size={24} color={currentPage === 'home' ? '#4CAF50' : '#FFFFFF'} />
+          <Text style={[styles.navText, currentPage === 'home' && styles.activeNavText]}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.navItem, currentPage === 'todo' && styles.activeNavItem]} 
+          onPress={() => setCurrentPage('todo')}
+        >
+          <MaterialIcons name="list" size={24} color={currentPage === 'todo' ? '#4CAF50' : '#FFFFFF'} />
+          <Text style={[styles.navText, currentPage === 'todo' && styles.activeNavText]}>To-Do</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.navItem, currentPage === 'progress' && styles.activeNavItem]} 
+          onPress={() => setCurrentPage('progress')}
+        >
+          <MaterialIcons name="trending-up" size={24} color={currentPage === 'progress' ? '#4CAF50' : '#FFFFFF'} />
+          <Text style={[styles.navText, currentPage === 'progress' && styles.activeNavText]}>Progress</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Snackbar for success message */}
       {isMounted && (
@@ -295,6 +340,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 30,
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    backgroundColor: '#3A3A3A',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    borderTopWidth: 1,
+    borderTopColor: '#4A4A4A',
+  },
+  navItem: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  activeNavItem: {
+    backgroundColor: '#2A2A2A',
+  },
+  navText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  activeNavText: {
+    color: '#4CAF50',
   },
   logoutButton: {
     flexDirection: 'row',

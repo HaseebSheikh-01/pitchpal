@@ -252,13 +252,6 @@ export default function Matchingscreen() {
         <Text style={styles.backButtonText}>‹ Back</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={[styles.resetButton, { top: insets.top + 16 }]} 
-        onPress={handleResetSwipes}
-      >
-        <Text style={styles.resetButtonText}>⟳ Reset Swipes</Text>
-      </TouchableOpacity>
-
       <View style={styles.cardContainer}>{renderStartups()}</View>
 
       <View style={styles.emojiContainer}>
@@ -287,18 +280,6 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  resetButton: {
-    position: 'absolute',
-    right: 16,
-    backgroundColor: '#FF4757',
-    padding: 10,
-    borderRadius: 8,
-    zIndex: 100,
-  },
-  resetButtonText: {
-    color: 'white',
     fontWeight: '600',
   },
   cardContainer: {

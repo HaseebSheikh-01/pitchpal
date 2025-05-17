@@ -65,7 +65,10 @@ export default function SavedStartups() {
 
   const handleContact = (contactLink: string) => {
     // Example: open the contact link in the browser or initiate an email
-    Linking.openURL(contactLink);
+    Linking.openURL(contactLink).catch(err => {
+      console.error('Failed to open contact link', err);
+      Alert.alert('Error', 'Unable to open contact link');
+    });
   };
 
   const renderItem = ({ item }: { item: Startup }) => (
