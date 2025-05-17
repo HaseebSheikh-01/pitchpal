@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: "absolute",
-    top: 60,  // Increased top margin to add more space from the top edge
+    top: 30,  // ⬆️ moved higher
     left: 20,
     paddingVertical: 10,
     paddingHorizontal: 20,

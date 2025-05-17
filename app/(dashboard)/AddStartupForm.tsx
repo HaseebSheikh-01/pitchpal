@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Modal, View, Text, TextInput, Button, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, SafeAreaView, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { Modal, View, Text, TextInput, Button, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'; // For picking images
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_IP from '../../constants/apiConfig';
@@ -54,7 +54,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
   const [industry, setIndustry] = useState('');
   const [team_size, setTeamSize] = useState('');
   const [revenue_usd, setRevenueUsd] = useState('');
-  const [consumer_base, setConsumerBase] = useState(''); // New state for consumer base
+  const [consumer_base, setConsumerBase] = useState('');
   const [image, setImage] = useState<string | null>(null);
 
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -62,56 +62,99 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
   const [showStageModal, setShowStageModal] = useState(false);
   const [selectedContinent, setSelectedContinent] = useState('');
 
-  // Add refs for each input field
-  const nameRef = useRef<TextInput>(null);
-  const fundingTotalRef = useRef<TextInput>(null);
-  const fundingRoundsRef = useRef<TextInput>(null);
-  const countryRef = useRef<TextInput>(null);
-  const teamSizeRef = useRef<TextInput>(null);
-  const revenueRef = useRef<TextInput>(null);
-  const consumerBaseRef = useRef<TextInput>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [windowHeight, setWindowHeight] = useState(Dimensions.get('window').height);
+  // Error states
+  const [fundingError, setFundingError] = useState('');
+  const [roundsError, setRoundsError] = useState('');
+  const [teamSizeError, setTeamSizeError] = useState('');
+  const [revenueError, setRevenueError] = useState('');
+  const [consumerbaseError, setConsumerbaseError] = useState('');
 
-  useEffect(() => {
-    const keyboardWillShow = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-      }
-    );
-    const keyboardWillHide = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0);
-      }
-    );
-
-    const dimensionChange = Dimensions.addEventListener('change', ({ window }) => {
-      setWindowHeight(window.height);
-    });
-
-    return () => {
-      keyboardWillShow.remove();
-      keyboardWillHide.remove();
-      dimensionChange.remove();
-    };
-  }, []);
-
-  const scrollToInput = (ref: React.RefObject<TextInput>) => {
-    if (ref.current) {
-      ref.current.measure((x, y, width, height, pageX, pageY) => {
-        const scrollPosition = pageY - (windowHeight * 0.3);
-        scrollViewRef.current?.scrollTo({
-          y: Math.max(0, scrollPosition),
-          animated: true
-        });
-      });
+  const validateNumericInput = (value: string, field: string) => {
+    if (value === '') {
+      return true; // Allow empty field (handled by required validation)
     }
+    
+    if (!/^\d+$/.test(value)) {
+      switch (field) {
+        case 'funding':
+          setFundingError('Invalid input - must be numeric');
+          return false;
+        case 'rounds':
+          setRoundsError('Invalid input - must be numeric');
+          return false;
+        case 'team':
+          setTeamSizeError('Invalid input - must be numeric');
+          return false;
+        case 'revenue':
+          setRevenueError('Invalid input - must be numeric');
+          return false;
+        case 'consumer':
+          setConsumerbaseError('Invalid input - must be numeric');
+          return false;
+        default:
+          return false;
+      }
+    }
+    
+    // Clear any existing errors if validation passes
+    switch (field) {
+      case 'funding':
+        setFundingError('');
+        break;
+      case 'rounds':
+        setRoundsError('');
+        break;
+      case 'team':
+        setTeamSizeError('');
+        break;
+      case 'revenue':
+        setRevenueError('');
+        break;
+      case 'consumer':
+        setConsumerbaseError('');
+        break;
+    }
+    
+    return true;
+  };
+
+  const handleFundingChange = (text: string) => {
+    setFundingTotalUsd(text);
+    validateNumericInput(text, 'funding');
+  };
+
+  const handleRoundsChange = (text: string) => {
+    setFundingRounds(text);
+    validateNumericInput(text, 'rounds');
+  };
+
+  const handleTeamSizeChange = (text: string) => {
+    setTeamSize(text);
+    validateNumericInput(text, 'team');
+  };
+
+  const handleRevenueChange = (text: string) => {
+    setRevenueUsd(text);
+    validateNumericInput(text, 'revenue');
+  };
+
+  const handleConsumerBaseChange = (text: string) => {
+    setConsumerBase(text);
+    validateNumericInput(text, 'consumer');
   };
 
   const handleSubmit = () => {
+    // Validate numeric fields first
+    const isFundingValid = validateNumericInput(funding_total_usd, 'funding');
+    const isRoundsValid = validateNumericInput(funding_rounds, 'rounds');
+    const isTeamSizeValid = validateNumericInput(team_size, 'team');
+    const isRevenueValid = validateNumericInput(revenue_usd, 'revenue');
+    const isConsumerBaseValid = validateNumericInput(consumer_base, 'consumer');
+    
+    if (!isFundingValid || !isRoundsValid || !isTeamSizeValid || !isRevenueValid || !isConsumerBaseValid) {
+      return; // Don't proceed if validation fails
+    }
+
     // Basic validation for required fields
     if (!name.trim()) {
       alert('Please enter the startup name.');
@@ -151,8 +194,9 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
     }
     if (!consumer_base.trim()) {
       alert('Please enter the consumer base.');
-      return; // Ensure consumer base is filled
+      return;
     }
+    
     onAddStartup({
       name,
       funding_total_usd: Number(funding_total_usd),
@@ -163,7 +207,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
       industry,
       team_size: Number(team_size),
       revenue_usd: Number(revenue_usd),
-      consumer_base: Number(consumer_base), // Pass consumer base
+      consumer_base: Number(consumer_base),
       image,
     });
     onClose();
@@ -197,284 +241,195 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
     });
 
     if (result && result.assets && result.assets[0]) {
-      const { uri } = result.assets[0];
-      setImage(uri);
+      const { uri } = result.assets[0]; // Get uri from result
+      setImage(uri); // Set the photo URI
     }
-  };
-
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
-        >
-          <TouchableWithoutFeedback onPress={dismissKeyboard}>
-            <View style={styles.modalBackground}>
-              <ScrollView 
-                ref={scrollViewRef}
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={true}
-                bounces={true}
-              >
-                <View style={styles.modalContent}>
-                  <Text style={styles.title}>Add Startup</Text>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.modalContent}>
+          <Text style={styles.title}>Add Startup</Text>
 
-                  <View style={styles.formFieldsContainer}>
-                    <Text style={styles.fieldLabel}>Startup Name</Text>
-                    <TextInput 
-                      ref={nameRef}
-                      placeholder="Enter startup name" 
-                      value={name} 
-                      onChangeText={setName} 
-                      style={styles.input}
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                      onFocus={() => scrollToInput(nameRef)}
-                      onSubmitEditing={() => {
-                        setTimeout(() => {
-                          fundingTotalRef.current?.focus();
-                        }, 0);
-                      }}
-                    />
-                    
-                    <Text style={styles.fieldLabel}>Total Funding</Text>
-                    <TextInput 
-                      ref={fundingTotalRef}
-                      placeholder="Enter total funding" 
-                      value={funding_total_usd} 
-                      onChangeText={setFundingTotalUsd} 
-                      style={styles.input}
-                      keyboardType="numbers-and-punctuation"
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                      onSubmitEditing={() => {
-                        setTimeout(() => {
-                          fundingRoundsRef.current?.focus();
-                        }, 0);
-                      }}
-                    />
-                    
-                    <Text style={styles.fieldLabel}>Funding Rounds</Text>
-                    <TextInput 
-                      ref={fundingRoundsRef}
-                      placeholder="Enter number of funding rounds" 
-                      value={funding_rounds} 
-                      onChangeText={setFundingRounds} 
-                      style={styles.input}
-                      keyboardType="numbers-and-punctuation"
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                      onSubmitEditing={() => {
-                        setTimeout(() => {
-                          countryRef.current?.focus();
-                        }, 0);
-                      }}
-                    />
-                    
-                    <Text style={styles.fieldLabel}>Continent</Text>
-                    <TouchableOpacity onPress={() => setShowLocationModal(true)} style={styles.dropdown}>
-                      <Text style={styles.dropdownText}>Select Continent</Text>
-                      <Text style={styles.selectedItemsText}>{selectedContinent || 'None Selected'}</Text>
-                    </TouchableOpacity>
+          {/* Startup Name */}
+          <TextInput 
+            placeholder="Startup Name" 
+            value={name} 
+            onChangeText={setName} 
+            style={styles.input} 
+          />
+          
+          {/* Total Funding */}
+          <View>
+            <TextInput 
+              placeholder="Total Funding" 
+              value={funding_total_usd} 
+              onChangeText={handleFundingChange} 
+              style={[styles.input, fundingError ? styles.errorInput : null]} 
+              keyboardType="numeric"
+            />
+            {fundingError ? <Text style={styles.errorText}>{fundingError}</Text> : null}
+          </View>
+          
+          {/* Funding Rounds */}
+          <View>
+            <TextInput 
+              placeholder="Funding Rounds" 
+              value={funding_rounds} 
+              onChangeText={handleRoundsChange} 
+              style={[styles.input, roundsError ? styles.errorInput : null]} 
+              keyboardType="numeric"
+            />
+            {roundsError ? <Text style={styles.errorText}>{roundsError}</Text> : null}
+          </View>
+          
+          {/* Continent Dropdown */}
+          <TouchableOpacity onPress={() => setShowLocationModal(true)} style={styles.dropdown}>
+            <Text style={styles.dropdownText}>Select Continent</Text>
+            <Text style={styles.selectedItemsText}>{selectedContinent || 'None Selected'}</Text>
+          </TouchableOpacity>
 
-                    {/* Continent Modal */}
-                    {showLocationModal && (
-                      <View style={styles.modalOverlay}>
-                        <View style={styles.modalContent}>
-                          <Text style={styles.title}>Select Continent</Text>
-                          {Object.keys(countriesByContinent).map(continent => (
-                            <TouchableOpacity
-                              key={continent}
-                              style={styles.optionButton}
-                              onPress={() => handleContinentSelection(continent)}
-                            >
-                              <Text style={[styles.optionText, selectedContinent === continent && styles.optionTextSelected]}>{continent}</Text>
-                            </TouchableOpacity>
-                          ))}
-                          <Button title="Close" onPress={() => setShowLocationModal(false)} color="#FF6347" />
-                        </View>
-                      </View>
-                    )}
-
-                    <Text style={styles.fieldLabel}>Country</Text>
-                    <TextInput 
-                      ref={countryRef}
-                      placeholder="Enter country name" 
-                      value={country} 
-                      onChangeText={setCountry} 
-                      style={styles.input}
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                      onSubmitEditing={() => {
-                        setTimeout(() => {
-                          teamSizeRef.current?.focus();
-                        }, 0);
-                      }}
-                    />
-                    
-                    <Text style={styles.fieldLabel}>Stage of Business</Text>
-                    <TouchableOpacity onPress={() => {
-                      dismissKeyboard();
-                      setShowStageModal(true);
-                    }} style={styles.dropdown}>
-                      <Text style={styles.dropdownText}>Select Stage of Business</Text>
-                      <Text style={styles.selectedItemsText}>{stage_of_business || 'None Selected'}</Text>
-                    </TouchableOpacity>
-
-                    {/* Stage Modal */}
-                    {showStageModal && (
-                      <View style={styles.modalOverlay}>
-                        <View style={styles.modalContent}>
-                          <Text style={styles.title}>Select Stage of Business</Text>
-                          {stages.map(stage => (
-                            <TouchableOpacity
-                              key={stage}
-                              style={styles.optionButton}
-                              onPress={() => handleSelection(stage, 'stage')}
-                            >
-                              <Text style={[styles.optionText, stage_of_business === stage && styles.optionTextSelected]}>{stage}</Text>
-                            </TouchableOpacity>
-                          ))}
-                          <Button title="Close" onPress={() => setShowStageModal(false)} color="#FF6347" />
-                        </View>
-                      </View>
-                    )}
-
-                    <Text style={styles.fieldLabel}>Industry</Text>
-                    <TouchableOpacity onPress={() => setShowIndustryModal(true)} style={styles.dropdown}>
-                      <Text style={styles.dropdownText}>Select Industry</Text>
-                      <Text style={styles.selectedItemsText}>{industry || 'None Selected'}</Text>
-                    </TouchableOpacity>
-
-                    {/* Industry Modal */}
-                    {showIndustryModal && (
-                      <View style={styles.modalOverlay}>
-                        <View style={styles.modalContent}>
-                          <Text style={styles.title}>Select Industry</Text>
-                          {industries.map(industryOption => (
-                            <TouchableOpacity
-                              key={industryOption}
-                              style={styles.optionButton}
-                              onPress={() => handleSelection(industryOption, 'industry')}
-                            >
-                              <Text style={[styles.optionText, industry === industryOption && styles.optionTextSelected]}>{industryOption}</Text>
-                            </TouchableOpacity>
-                          ))}
-                          <Button title="Close" onPress={() => setShowIndustryModal(false)} color="#FF6347" />
-                        </View>
-                      </View>
-                    )}
-
-                    <Text style={styles.fieldLabel}>Team Size</Text>
-                    <TextInput 
-                      ref={teamSizeRef}
-                      placeholder="Enter team size" 
-                      value={team_size} 
-                      onChangeText={setTeamSize} 
-                      style={styles.input}
-                      keyboardType="numbers-and-punctuation"
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                      onSubmitEditing={() => {
-                        setTimeout(() => {
-                          revenueRef.current?.focus();
-                        }, 0);
-                      }}
-                    />
-                    
-                    <Text style={styles.fieldLabel}>Revenue</Text>
-                    <TextInput 
-                      ref={revenueRef}
-                      placeholder="Enter revenue in USD" 
-                      value={revenue_usd} 
-                      onChangeText={setRevenueUsd} 
-                      style={styles.input}
-                      keyboardType="numbers-and-punctuation"
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                      onSubmitEditing={() => {
-                        setTimeout(() => {
-                          consumerBaseRef.current?.focus();
-                        }, 0);
-                      }}
-                    />
-
-                    <Text style={styles.fieldLabel}>Consumer Base</Text>
-                    <TextInput 
-                      ref={consumerBaseRef}
-                      placeholder="Enter number of customers" 
-                      value={consumer_base} 
-                      onChangeText={setConsumerBase} 
-                      style={styles.input}
-                      keyboardType="numbers-and-punctuation"
-                      returnKeyType="next"
-                      onFocus={() => scrollToInput(consumerBaseRef)}
-                      onSubmitEditing={() => {
-                        setTimeout(() => {
-                          dismissKeyboard();
-                        }, 0);
-                      }}
-                    />
-                  </View>
-
-                  <View style={styles.uploadSection}>
-                    <Text style={styles.fieldLabel}>Photo</Text>
-                    <TouchableOpacity 
-                      onPress={() => {
-                        dismissKeyboard();
-                        pickImage();
-                      }} 
-                      style={styles.uploadButton}
-                    >
-                      <Text style={styles.uploadButtonText}>Upload Photo</Text>
-                    </TouchableOpacity>
-                    {image && (
-                      <View style={styles.imageContainer}>
-                        <Image source={{ uri: image }} style={styles.uploadedImage} />
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.buttonsContainer}>
-                    <TouchableOpacity style={styles.roundButton} onPress={handleSubmit}>
-                      <Text style={styles.buttonText}>Submit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.roundButton} onPress={onClose}>
-                      <Text style={styles.buttonText}>Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </ScrollView>
+          {/* Continent Modal */}
+          {showLocationModal && (
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.title}>Select Continent</Text>
+                {Object.keys(countriesByContinent).map(continent => (
+                  <TouchableOpacity
+                    key={continent}
+                    style={styles.optionButton}
+                    onPress={() => handleContinentSelection(continent)}
+                  >
+                    <Text style={[styles.optionText, selectedContinent === continent && styles.optionTextSelected]}>{continent}</Text>
+                  </TouchableOpacity>
+                ))}
+                <Button title="Close" onPress={() => setShowLocationModal(false)} color="#FF6347" />
+              </View>
             </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+          )}
+
+          {/* Country Text Input */}
+          <TextInput 
+            placeholder="Enter Country Name" 
+            value={country} 
+            onChangeText={setCountry} 
+            style={styles.input} 
+          />
+          
+          {/* Stage of Business Dropdown */}
+          <TouchableOpacity onPress={() => setShowStageModal(true)} style={styles.dropdown}>
+            <Text style={styles.dropdownText}>Select Stage of Business</Text>
+            <Text style={styles.selectedItemsText}>{stage_of_business || 'None Selected'}</Text>
+          </TouchableOpacity>
+
+          {/* Stage Modal */}
+          {showStageModal && (
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.title}>Select Stage of Business</Text>
+                {stages.map(stage => (
+                  <TouchableOpacity
+                    key={stage}
+                    style={styles.optionButton}
+                    onPress={() => handleSelection(stage, 'stage')}
+                  >
+                    <Text style={[styles.optionText, stage_of_business === stage && styles.optionTextSelected]}>{stage}</Text>
+                  </TouchableOpacity>
+                ))}
+                <Button title="Close" onPress={() => setShowStageModal(false)} color="#FF6347" />
+              </View>
+            </View>
+          )}
+
+          {/* Industry Dropdown */}
+          <TouchableOpacity onPress={() => setShowIndustryModal(true)} style={styles.dropdown}>
+            <Text style={styles.dropdownText}>Select Industry</Text>
+            <Text style={styles.selectedItemsText}>{industry || 'None Selected'}</Text>
+          </TouchableOpacity>
+
+          {/* Industry Modal */}
+          {showIndustryModal && (
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.title}>Select Industry</Text>
+                {industries.map(industryOption => (
+                  <TouchableOpacity
+                    key={industryOption}
+                    style={styles.optionButton}
+                    onPress={() => handleSelection(industryOption, 'industry')}
+                  >
+                    <Text style={[styles.optionText, industry === industryOption && styles.optionTextSelected]}>{industryOption}</Text>
+                  </TouchableOpacity>
+                ))}
+                <Button title="Close" onPress={() => setShowIndustryModal(false)} color="#FF6347" />
+              </View>
+            </View>
+          )}
+
+          {/* Team Size */}
+          <View>
+            <TextInput 
+              placeholder="Team Size" 
+              value={team_size} 
+              onChangeText={handleTeamSizeChange} 
+              style={[styles.input, teamSizeError ? styles.errorInput : null]} 
+              keyboardType="numeric"
+            />
+            {teamSizeError ? <Text style={styles.errorText}>{teamSizeError}</Text> : null}
+          </View>
+          
+          {/* Revenue */}
+          <View>
+            <TextInput 
+              placeholder="Revenue in $USD" 
+              value={revenue_usd} 
+              onChangeText={handleRevenueChange} 
+              style={[styles.input, revenueError ? styles.errorInput : null]} 
+              keyboardType="numeric"
+            />
+            {revenueError ? <Text style={styles.errorText}>{revenueError}</Text> : null}
+          </View>
+
+          {/* Consumer Base */}
+          <View>
+            <TextInput 
+              placeholder="Consumer Base (Number of customers)" 
+              value={consumer_base} 
+              onChangeText={handleConsumerBaseChange} 
+              style={[styles.input, consumerbaseError ? styles.errorInput : null]} 
+              keyboardType="numeric"
+            />
+            {consumerbaseError ? <Text style={styles.errorText}>{consumerbaseError}</Text> : null}
+          </View>
+
+          {/* Photo Upload */}
+          <TouchableOpacity onPress={pickImage} style={styles.uploadButton}>
+            <Text style={styles.uploadButtonText}>Upload Photo</Text>
+          </TouchableOpacity>
+          {image && <Image source={{ uri: image }} style={styles.uploadedImage} />}
+
+          {/* Action Buttons with Round Corners */}
+          <View style={styles.buttonsContainer}>
+            <TouchableOpacity style={styles.roundButton} onPress={handleSubmit}>
+              <Text style={styles.buttonText}>Submit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.roundButton} onPress={onClose}>
+              <Text style={styles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  modalBackground: {
+  container: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    width: '100%',
-  },
-  scrollView: {
-    flex: 1,
-    width: '100%',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingVertical: 20,
-    paddingBottom: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContent: {
     width: '90%',
@@ -482,7 +437,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
     borderRadius: 15,
     marginHorizontal: 20,
-    alignSelf: 'center',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 999, // Ensure the overlay is on top
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     fontSize: 26,
@@ -490,12 +455,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 20,
-  },
-  fieldLabel: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 8,
-    fontWeight: '500',
   },
   input: {
     borderWidth: 1,
@@ -509,6 +468,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     width: '100%',
   },
+  errorInput: {
+    borderColor: '#FF6347', // Red border for error
+  },
+  errorText: {
+    color: '#FF6347',
+    fontSize: 12,
+    marginTop: -10,
+    marginBottom: 15,
+  },
   dropdown: {
     borderWidth: 1,
     borderColor: '#1DB954',
@@ -516,13 +484,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 15,
     justifyContent: 'center',
-    backgroundColor: '#333333',
-    zIndex: 2,
-    width: '100%',
   },
   dropdownText: {
     fontSize: 16,
-    color: '#AAAAAA',
+    color: '#FFFFFF',
   },
   selectedItemsText: {
     fontSize: 16,
@@ -541,53 +506,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  formFieldsContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  uploadSection: {
-    marginTop: 20,
-    marginBottom: 20,
-    width: '100%',
-  },
-  imageContainer: {
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  uploadedImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-  },
   uploadButton: {
     backgroundColor: '#1DB954',
     padding: 15,
+    marginTop: 10,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 5,
   },
   uploadButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
   },
-  buttonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 20,
-    marginBottom: 20,
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    zIndex: 9999,
-    elevation: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
+  uploadedImage: {
+    width: 100,
+    height: 100,
+    marginTop: 10,
+    borderRadius: 10,
   },
   optionButton: {
     padding: 15,
@@ -602,7 +536,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1DB954',
   },
+  buttonsContainer: {
+    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
 });
-
 
 export default AddStartupForm;
