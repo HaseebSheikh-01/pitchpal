@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, Modal } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, FontAwesome, MaterialIcons } from "@expo/vector-icons";
@@ -49,16 +49,80 @@ function BottomNavBar({ selected }: { selected: string }) {
   );
 }
 
+function GuidanceModal({ onClose }: { onClose: () => void }) {
+  return (
+    <Modal
+      visible={true}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.guidanceModalContent}>
+          <Text style={styles.guidanceTitle}>Welcome to Your Dashboard!</Text>
+          
+          <View style={styles.guidanceSection}>
+            <Ionicons name="stats-chart" size={24} color="#4CAF50" />
+            <View style={styles.guidanceTextContainer}>
+              <Text style={styles.guidanceSubtitle}>Your Statistics</Text>
+              <Text style={styles.guidanceText}>Track your startup interactions, saved startups, and successful matches</Text>
+            </View>
+          </View>
+
+          <View style={styles.guidanceSection}>
+            <Ionicons name="rocket" size={24} color="#1E90FF" />
+            <View style={styles.guidanceTextContainer}>
+              <Text style={styles.guidanceSubtitle}>View Startups</Text>
+              <Text style={styles.guidanceText}>Start swiping through startups that match your preferences</Text>
+            </View>
+          </View>
+
+          <View style={styles.guidanceSection}>
+            <Ionicons name="search" size={24} color="#FF9800" />
+            <View style={styles.guidanceTextContainer}>
+              <Text style={styles.guidanceSubtitle}>Discover</Text>
+              <Text style={styles.guidanceText}>Explore and find new startups based on your interests</Text>
+            </View>
+          </View>
+
+          <View style={styles.guidanceSection}>
+            <Ionicons name="person" size={24} color="#E91E63" />
+            <View style={styles.guidanceTextContainer}>
+              <Text style={styles.guidanceSubtitle}>Profile Settings</Text>
+              <Text style={styles.guidanceText}>Update your preferences and investment criteria</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.guidanceButton}
+            onPress={onClose}
+          >
+            <Text style={styles.guidanceButtonText}>Got it!</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function InvestorDashboard() {
   const [stats, setStats] = useState({ viewed: 0, saved: 0, matched: 0 });
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showGuidance, setShowGuidance] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    // Fetch metrics from AsyncStorage
-    const fetchMetrics = async () => {
+    const initialize = async () => {
       try {
+        // Check if guidance has been shown in this session
+        const hasSeenGuidance = await AsyncStorage.getItem('hasSeenDashboardGuidance');
+        if (!hasSeenGuidance) {
+          setShowGuidance(true);
+          await AsyncStorage.setItem('hasSeenDashboardGuidance', 'true');
+        }
+
+        // Fetch metrics from AsyncStorage
         const viewedStr = await AsyncStorage.getItem('startupsViewedCount');
         const savedStr = await AsyncStorage.getItem('startupsSavedCount');
         const matchedStr = await AsyncStorage.getItem('successfulMatchesCount');
@@ -68,16 +132,10 @@ export default function InvestorDashboard() {
         const matched = matchedStr ? parseInt(matchedStr, 10) : 0;
 
         setStats({ viewed, saved, matched });
-      } catch (error) {
-        console.error('Error fetching metrics from AsyncStorage:', error);
-      }
-    };
 
-    // Fetch userId and username from AsyncStorage and API
-    const fetchUserData = async () => {
-      try {
+        // Fetch user data
         const userId = await AsyncStorage.getItem("userId");
-        const token = await AsyncStorage.getItem("token"); // Fetch token from AsyncStorage
+        const token = await AsyncStorage.getItem("token");
 
         if (!userId || !token) {
           console.error("User ID or token is missing");
@@ -85,9 +143,9 @@ export default function InvestorDashboard() {
         }
 
         const response = await fetch(`${API_IP}/api/users/${userId}`, {
-          method: "GET", // Ensure you are using the correct HTTP method (GET)
+          method: "GET",
           headers: {
-            Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -100,15 +158,18 @@ export default function InvestorDashboard() {
           setUsername(data.user.name);
         }
       } catch (error) {
-        console.error("Failed to fetch user data", error);
+        console.error("Error initializing dashboard:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMetrics();
-    fetchUserData();
+    initialize();
   }, []);
+
+  const handleCloseGuidance = () => {
+    setShowGuidance(false);
+  };
 
   const handleLogout = async () => {
     try {
@@ -130,6 +191,8 @@ export default function InvestorDashboard() {
 
   return (
     <View style={styles.container}>
+      {showGuidance && <GuidanceModal onClose={handleCloseGuidance} />}
+      
       {/* Header Section */}
       <View style={styles.headerCenteredColumn}>
         <Text style={styles.welcomeText}>Welcome back,</Text>
@@ -152,7 +215,7 @@ export default function InvestorDashboard() {
         />
         <StatisticCard
           icon={<Ionicons name="checkmark-circle" size={32} color="#2196F3" />}
-          label="Successful Matches"
+          label="Startups Contacted"
           count={stats.matched}
           iconColor="#2196F3"
         />
@@ -172,7 +235,7 @@ export default function InvestorDashboard() {
 
       {/* Logout Button */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Ionicons name="log-out" size={20} color="white" style={{ marginRight: 8 }} />
+        <Ionicons name="log-out-outline" size={18} color="#FF4444" style={{ marginRight: 6 }} />
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
 
@@ -266,16 +329,22 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     flexDirection: "row",
-    backgroundColor: "#E91E63", // Red color for logout
-    paddingVertical: 15,
-    borderRadius: 30,
+    backgroundColor: "transparent",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 40,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#FF4444',
+    alignSelf: 'flex-end',
+    marginRight: 20,
+    width: 'auto',
   },
   logoutButtonText: {
-    color: "white",
-    fontSize: 18,
+    color: "#FF4444",
+    fontSize: 14,
     fontWeight: "600",
   },
   bottomNav: {
@@ -302,5 +371,63 @@ const styles = StyleSheet.create({
   navTextSelected: {
     color: "#1E90FF",
     fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  guidanceModalContent: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 20,
+    padding: 30,
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  guidanceTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  guidanceSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A2A2A',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    width: '100%',
+  },
+  guidanceTextContainer: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  guidanceSubtitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  guidanceText: {
+    fontSize: 14,
+    color: '#B2B2B2',
+    lineHeight: 20,
+  },
+  guidanceButton: {
+    backgroundColor: '#1DB954',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    marginTop: 16,
+  },
+  guidanceButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

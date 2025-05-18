@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity, Dimensions } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_IP from '../../constants/apiConfig';
 import { useRouter } from 'expo-router'; // Import router from expo-router
+import { MaterialIcons } from '@expo/vector-icons';
 
 const API_URL = `${API_IP}/api/investors`; // Your API URL to fetch investor data
 
@@ -20,6 +21,25 @@ const startupTypes = [
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+function GuidanceBanner({ onClose }: { onClose: () => void }) {
+  return (
+    <View style={styles.guidanceBanner}>
+      <View style={styles.guidanceContent}>
+        <MaterialIcons name="info" size={24} color="#FFFFFF" style={styles.guidanceIcon} />
+        <View style={styles.guidanceTextContainer}>
+          <Text style={styles.guidanceTitle}>Complete Your Profile</Text>
+          <Text style={styles.guidanceText}>
+            Fill in your preferences to get matched with the most relevant startups. Your investment range, industry preferences, and startup types will help us find the perfect matches for you.
+          </Text>
+        </View>
+        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <MaterialIcons name="close" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
 
 function MultiSelectDropdown({
   label,
@@ -70,8 +90,33 @@ export default function ProfileSetting() {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [selectedStartupTypes, setSelectedStartupTypes] = useState<string[]>([]);
+  const [showGuidance, setShowGuidance] = useState(true);
 
   const router = useRouter(); // Use the router from expo-router
+
+  useEffect(() => {
+    checkFirstTimeProfile();
+  }, []);
+
+  const checkFirstTimeProfile = async () => {
+    try {
+      const hasSeenProfileGuidance = await AsyncStorage.getItem('hasSeenProfileGuidance');
+      if (hasSeenProfileGuidance) {
+        setShowGuidance(false);
+      }
+    } catch (error) {
+      console.error('Error checking profile guidance:', error);
+    }
+  };
+
+  const handleCloseGuidance = async () => {
+    setShowGuidance(false);
+    try {
+      await AsyncStorage.setItem('hasSeenProfileGuidance', 'true');
+    } catch (error) {
+      console.error('Error saving profile guidance state:', error);
+    }
+  };
 
   const handleSubmit = async () => {
     const minVal = parseInt(minInvestment, 10);
@@ -138,7 +183,8 @@ export default function ProfileSetting() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Removed back button as per request */}
+      {showGuidance && <GuidanceBanner onClose={handleCloseGuidance} />}
+      
       <Text style={styles.title}>Profile Settings</Text>
 
       <Text style={styles.label}>Name</Text>
@@ -300,5 +346,42 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: "#FFFFFF",
     fontWeight: "bold",
+  },
+  guidanceBanner: {
+    backgroundColor: '#1E90FF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  guidanceContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  guidanceIcon: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  guidanceTextContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  guidanceTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  guidanceText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  closeButton: {
+    padding: 4,
   },
 });

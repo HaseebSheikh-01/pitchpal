@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import API_IP from '../../constants/apiConfig';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -35,6 +36,54 @@ type Startup = {
   image: string;
 };
 
+function GuidanceModal({ onClose }: { onClose: () => void }) {
+  return (
+    <Modal
+      visible={true}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.guidanceModalContent}>
+          <Text style={styles.guidanceTitle}>Welcome to Startup Matching!</Text>
+          
+          <View style={styles.guidanceSection}>
+            <MaterialIcons name="swipe" size={24} color="#1DB954" />
+            <View style={styles.guidanceTextContainer}>
+              <Text style={styles.guidanceSubtitle}>Swipe Right</Text>
+              <Text style={styles.guidanceText}>Save startups you're interested in</Text>
+            </View>
+          </View>
+
+          <View style={styles.guidanceSection}>
+            <MaterialIcons name="swipe-left" size={24} color="#FF4444" />
+            <View style={styles.guidanceTextContainer}>
+              <Text style={styles.guidanceSubtitle}>Swipe Left</Text>
+              <Text style={styles.guidanceText}>Skip startups that don't match your interests</Text>
+            </View>
+          </View>
+
+          <View style={styles.guidanceSection}>
+            <MaterialIcons name="analytics" size={24} color="#FF9800" />
+            <View style={styles.guidanceTextContainer}>
+              <Text style={styles.guidanceSubtitle}>View Metrics</Text>
+              <Text style={styles.guidanceText}>Check success probability and key metrics for each startup</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.guidanceButton}
+            onPress={onClose}
+          >
+            <Text style={styles.guidanceButtonText}>Got it!</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function Matchingscreen() {
   const [startups, setStartups] = useState<Startup[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -48,6 +97,7 @@ export default function Matchingscreen() {
   const position = useRef(new Animated.ValueXY()).current;
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [showGuidance, setShowGuidance] = useState(false);
 
   useEffect(() => {
     const initialize = async () => {
@@ -55,6 +105,13 @@ export default function Matchingscreen() {
         const savedIds = await AsyncStorage.getItem('swipedStartups');
         if (savedIds) setSwipedIds(JSON.parse(savedIds));
         await fetchStartups();
+        
+        // Check if guidance has been shown in this session
+        const hasSeenGuidance = await AsyncStorage.getItem('hasSeenMatchingGuidance');
+        if (!hasSeenGuidance) {
+          setShowGuidance(true);
+          await AsyncStorage.setItem('hasSeenMatchingGuidance', 'true');
+        }
       } catch (error) {
         console.error('Initialization error:', error);
         setError('Failed to initialize');
@@ -134,7 +191,9 @@ export default function Matchingscreen() {
       console.error('Error updating startups viewed count:', error);
     }
 
+    // Call the appropriate API for swipe direction
     if (direction === 'right') {
+      await rightSwipe(swipedStartup.id);
       await saveStartup(swipedStartup);
 
       // Increment startups saved count
@@ -145,6 +204,8 @@ export default function Matchingscreen() {
       } catch (error) {
         console.error('Error updating startups saved count:', error);
       }
+    } else if (direction === 'left') {
+      await leftSwipe(swipedStartup.id);
     }
 
     setStartups(remaining);
@@ -178,20 +239,82 @@ export default function Matchingscreen() {
     fetchStartups();
   };
 
-  const handleViewMetrics = async (startup: Startup) => {
+  // API call to record a left swipe
+  const leftSwipe = async (startupId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch(`${API_IP}/api/startup-interactions/${startupId}/left-swipe`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Left swipe API error:', error);
+    }
+  };
+
+  // API call to record a right swipe
+  const rightSwipe = async (startupId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch(`${API_IP}/api/startup-interactions/${startupId}/right-swipe`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Right swipe API error:', error);
+    }
+  };
+
+  // API call to record a viewed startup
+  const viewedStartup = async (startupId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      await fetch(`${API_IP}/api/startup-interactions/${startupId}/view`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Viewed startup API error:', error);
+    }
+  };
+
+  // Call viewedStartup when a new startup is shown (top card)
+  useEffect(() => {
+    if (startups.length > 0) {
+      viewedStartup(startups[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startups.length > 0 && startups[0]?.id]);
+
+  const handleCloseGuidance = () => {
+    setShowGuidance(false);
+  };
+
+  // Add function to generate random probability
+  const generateRandomProbability = () => {
+    return Math.floor(Math.random() * (80 - 30 + 1)) + 30; // Random number between 30 and 80
+  };
+
+  // Add function to handle metrics view
+  const handleViewMetrics = (startup: Startup) => {
     setIsMetricsLoading(true);
     setSelectedStartup(startup);
     setShowMetricsModal(true);
     
-    // Simulate model processing time
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Generate a random success probability between 30% and 80%
-    const min = 30;
-    const max = 80;
-    const probability = Math.floor(Math.random() * (max - min + 1)) + min;
-    setSuccessProbability(probability);
-    setIsMetricsLoading(false);
+    // Simulate loading delay
+    setTimeout(() => {
+      setSuccessProbability(generateRandomProbability());
+      setIsMetricsLoading(false);
+    }, 1500);
   };
 
   const renderStartups = () => {
@@ -257,6 +380,8 @@ export default function Matchingscreen() {
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
+      {showGuidance && <GuidanceModal onClose={handleCloseGuidance} />}
+
       <TouchableOpacity 
         style={[styles.backButton, { top: insets.top + 16 }]} 
         onPress={() => router.push('/InvestorDashboard')}
@@ -278,6 +403,7 @@ export default function Matchingscreen() {
         onRequestClose={() => {
           setShowMetricsModal(false);
           setSuccessProbability(null);
+          setSelectedStartup(null);
         }}
       >
         <View style={styles.modalOverlay}>
@@ -300,6 +426,7 @@ export default function Matchingscreen() {
                   onPress={() => {
                     setShowMetricsModal(false);
                     setSuccessProbability(null);
+                    setSelectedStartup(null);
                   }}
                 >
                   <Text style={styles.closeButtonText}>Close</Text>
@@ -336,8 +463,8 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     flex: 1,
-    justifyContent: 'center', // Centers the cards vertically
-    alignItems: 'center', // Centers the cards horizontally
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 60,
   },
   card: {
@@ -353,9 +480,8 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
     padding: 20,
-    justifyContent: 'center', // Centers content inside the card
-    alignItems: 'center', // Centers content inside the card
-    // Remove the top and left position, rely on flexbox for centering
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   image: {
     width: '100%',
@@ -508,6 +634,57 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  guidanceModalContent: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 20,
+    padding: 30,
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  guidanceTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  guidanceSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A2A2A',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    width: '100%',
+  },
+  guidanceTextContainer: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  guidanceSubtitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  guidanceText: {
+    fontSize: 14,
+    color: '#B2B2B2',
+    lineHeight: 20,
+  },
+  guidanceButton: {
+    backgroundColor: '#1DB954',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    marginTop: 16,
+  },
+  guidanceButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

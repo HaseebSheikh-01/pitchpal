@@ -46,34 +46,32 @@ const StartupAnalytics: React.FC = () => {
       const data = await response.json();
       const userStartups = data.startups || [];
 
-      // For each startup, fetch its analytics
+      // For each startup, fetch its analytics from the backend
       const startupsWithAnalytics = await Promise.all(
         userStartups.map(async (startup: any) => {
-          // Get swipes data from AsyncStorage
-          const swipedStartups = await AsyncStorage.getItem('swipedStartups');
-          const savedStartups = await AsyncStorage.getItem('savedStartups');
-          
-          const swipedIds = swipedStartups ? JSON.parse(swipedStartups) : [];
-          const savedIds = savedStartups ? JSON.parse(savedStartups) : [];
-          
-          // Count right swipes (saved startups)
-          const rightSwipes = savedIds.filter((s: any) => s.id === startup.id).length;
-          
-          // Count left swipes (swiped but not saved)
-          const leftSwipes = swipedIds.filter((id: string) => id === startup.id).length - rightSwipes;
-          
-          // Calculate total views (right + left swipes)
-          const totalViews = rightSwipes + leftSwipes;
-          
+          // Fetch analytics from backend
+          const analyticsRes = await fetch(`${API_IP}/api/startup-interactions/${startup.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          let analytics = { left_swipes: 0, right_swipes: 0, views: 0 };
+          if (analyticsRes.ok) {
+            analytics = await analyticsRes.json();
+          }
+
           // Calculate match rate
+          const totalViews = analytics.views || 0;
+          const rightSwipes = analytics.right_swipes || 0;
           const matchRate = totalViews > 0 ? (rightSwipes / totalViews) * 100 : 0;
 
           return {
             id: startup.id,
             name: startup.name,
-            rightSwipes,
-            leftSwipes,
-            totalViews,
+            rightSwipes: rightSwipes,
+            leftSwipes: analytics.left_swipes || 0,
+            totalViews: totalViews,
             matchRate,
             industry: startup.industry,
           };
@@ -242,4 +240,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default StartupAnalytics; 
+export default StartupAnalytics;

@@ -1,11 +1,29 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions } from "react-native";
 import { Link, router } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_IP from '../constants/apiConfig';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function RoleSelectionScreen() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [showGuidance, setShowGuidance] = useState(false);
+
+  useEffect(() => {
+    checkFirstTimeUser();
+  }, []);
+
+  const checkFirstTimeUser = async () => {
+    try {
+      const hasSeenGuidance = await AsyncStorage.getItem('hasSeenRoleGuidance');
+      if (!hasSeenGuidance) {
+        setShowGuidance(true);
+        await AsyncStorage.setItem('hasSeenRoleGuidance', 'true');
+      }
+    } catch (error) {
+      console.error('Error checking first time user:', error);
+    }
+  };
 
   // Function to handle role selection
   const handleRoleSelect = (role: string) => {
@@ -67,8 +85,52 @@ export default function RoleSelectionScreen() {
     }
   };
 
+  const GuidanceModal = () => (
+    <Modal
+      visible={showGuidance}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setShowGuidance(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <MaterialIcons name="lightbulb" size={24} color="#4CAF50" />
+            <Text style={styles.modalTitle}>Welcome to PitchPal!</Text>
+          </View>
+          
+          <Text style={styles.modalText}>
+            Let's get you started! Choose your role to begin your journey:
+          </Text>
+          
+          <View style={styles.guidanceItem}>
+            <MaterialIcons name="account-balance" size={20} color="#1E90FF" />
+            <Text style={styles.guidanceText}>
+              <Text style={styles.guidanceHighlight}>Investor:</Text> Discover and invest in promising startups
+            </Text>
+          </View>
+          
+          <View style={styles.guidanceItem}>
+            <MaterialIcons name="rocket-launch" size={20} color="#4CAF50" />
+            <Text style={styles.guidanceText}>
+              <Text style={styles.guidanceHighlight}>Startup:</Text> Pitch your startup and attract investors
+            </Text>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.modalButton}
+            onPress={() => setShowGuidance(false)}
+          >
+            <Text style={styles.modalButtonText}>Got it!</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.container}>
+      <GuidanceModal />
       <Link href="/" asChild>
         <TouchableOpacity style={styles.backButton}>
           <Text style={styles.backButtonText}>← Back</Text>
@@ -182,5 +244,66 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontSize: 16,
     fontWeight: '600'
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
+    padding: 24,
+    width: Dimensions.get('window').width - 48,
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '600',
+    marginLeft: 12,
+  },
+  modalText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 20,
+    lineHeight: 24,
+  },
+  guidanceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    backgroundColor: '#2A2A2A',
+    padding: 12,
+    borderRadius: 8,
+  },
+  guidanceText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginLeft: 12,
+    flex: 1,
+  },
+  guidanceHighlight: {
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  modalButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

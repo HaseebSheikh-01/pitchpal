@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Link, router } from "expo-router";
 import API_IP from '../constants/apiConfig';
 
@@ -76,7 +76,7 @@ export default function SignupScreen() {
             name: formData.fullName,
             email: formData.email,
             password: formData.password,
-            role: "null" // default role, or you can collect this later
+            role: "null" // Default role, or you can collect this later
           })
         });
 
@@ -124,7 +124,7 @@ export default function SignupScreen() {
           placeholderTextColor="#999"
           keyboardType="email-address"
           value={formData.email}
-          onChangeText={(text) => handleChange('email', text)}
+          onChangeText={(text) => handleChange('email', text.toLowerCase())}
         />
         {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
 

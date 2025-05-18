@@ -248,187 +248,295 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.modalContent}>
-          <Text style={styles.title}>Add Startup</Text>
+      <View style={styles.modalOverlay}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          showsVerticalScrollIndicator={true}
+          bounces={true}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.title}>Add Startup</Text>
 
-          {/* Startup Name */}
-          <TextInput 
-            placeholder="Startup Name" 
-            value={name} 
-            onChangeText={setName} 
-            style={styles.input} 
-          />
-          
-          {/* Total Funding */}
-          <View>
-            <TextInput 
-              placeholder="Total Funding" 
-              value={funding_total_usd} 
-              onChangeText={handleFundingChange} 
-              style={[styles.input, fundingError ? styles.errorInput : null]} 
-              keyboardType="numeric"
-            />
-            {fundingError ? <Text style={styles.errorText}>{fundingError}</Text> : null}
-          </View>
-          
-          {/* Funding Rounds */}
-          <View>
-            <TextInput 
-              placeholder="Funding Rounds" 
-              value={funding_rounds} 
-              onChangeText={handleRoundsChange} 
-              style={[styles.input, roundsError ? styles.errorInput : null]} 
-              keyboardType="numeric"
-            />
-            {roundsError ? <Text style={styles.errorText}>{roundsError}</Text> : null}
-          </View>
-          
-          {/* Continent Dropdown */}
-          <TouchableOpacity onPress={() => setShowLocationModal(true)} style={styles.dropdown}>
-            <Text style={styles.dropdownText}>Select Continent</Text>
-            <Text style={styles.selectedItemsText}>{selectedContinent || 'None Selected'}</Text>
-          </TouchableOpacity>
-
-          {/* Continent Modal */}
-          {showLocationModal && (
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Text style={styles.title}>Select Continent</Text>
-                {Object.keys(countriesByContinent).map(continent => (
-                  <TouchableOpacity
-                    key={continent}
-                    style={styles.optionButton}
-                    onPress={() => handleContinentSelection(continent)}
-                  >
-                    <Text style={[styles.optionText, selectedContinent === continent && styles.optionTextSelected]}>{continent}</Text>
-                  </TouchableOpacity>
-                ))}
-                <Button title="Close" onPress={() => setShowLocationModal(false)} color="#FF6347" />
-              </View>
+            {/* Startup Name */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Startup Name</Text>
+              <TextInput 
+                placeholder="Enter startup name" 
+                value={name} 
+                onChangeText={setName} 
+                style={styles.input} 
+                placeholderTextColor="#666666"
+              />
             </View>
-          )}
-
-          {/* Country Text Input */}
-          <TextInput 
-            placeholder="Enter Country Name" 
-            value={country} 
-            onChangeText={setCountry} 
-            style={styles.input} 
-          />
-          
-          {/* Stage of Business Dropdown */}
-          <TouchableOpacity onPress={() => setShowStageModal(true)} style={styles.dropdown}>
-            <Text style={styles.dropdownText}>Select Stage of Business</Text>
-            <Text style={styles.selectedItemsText}>{stage_of_business || 'None Selected'}</Text>
-          </TouchableOpacity>
-
-          {/* Stage Modal */}
-          {showStageModal && (
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Text style={styles.title}>Select Stage of Business</Text>
-                {stages.map(stage => (
-                  <TouchableOpacity
-                    key={stage}
-                    style={styles.optionButton}
-                    onPress={() => handleSelection(stage, 'stage')}
-                  >
-                    <Text style={[styles.optionText, stage_of_business === stage && styles.optionTextSelected]}>{stage}</Text>
-                  </TouchableOpacity>
-                ))}
-                <Button title="Close" onPress={() => setShowStageModal(false)} color="#FF6347" />
-              </View>
+            
+            {/* Total Funding */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Total Funding (USD)</Text>
+              <TextInput 
+                placeholder="Enter total funding amount" 
+                value={funding_total_usd} 
+                onChangeText={handleFundingChange} 
+                style={[styles.input, fundingError ? styles.errorInput : null]} 
+                keyboardType="numeric"
+                placeholderTextColor="#666666"
+              />
+              {fundingError ? <Text style={styles.errorText}>{fundingError}</Text> : null}
             </View>
-          )}
-
-          {/* Industry Dropdown */}
-          <TouchableOpacity onPress={() => setShowIndustryModal(true)} style={styles.dropdown}>
-            <Text style={styles.dropdownText}>Select Industry</Text>
-            <Text style={styles.selectedItemsText}>{industry || 'None Selected'}</Text>
-          </TouchableOpacity>
-
-          {/* Industry Modal */}
-          {showIndustryModal && (
-            <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Text style={styles.title}>Select Industry</Text>
-                {industries.map(industryOption => (
-                  <TouchableOpacity
-                    key={industryOption}
-                    style={styles.optionButton}
-                    onPress={() => handleSelection(industryOption, 'industry')}
-                  >
-                    <Text style={[styles.optionText, industry === industryOption && styles.optionTextSelected]}>{industryOption}</Text>
-                  </TouchableOpacity>
-                ))}
-                <Button title="Close" onPress={() => setShowIndustryModal(false)} color="#FF6347" />
-              </View>
+            
+            {/* Funding Rounds */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Number of Funding Rounds</Text>
+              <TextInput 
+                placeholder="Enter number of funding rounds" 
+                value={funding_rounds} 
+                onChangeText={handleRoundsChange} 
+                style={[styles.input, roundsError ? styles.errorInput : null]} 
+                keyboardType="numeric"
+                placeholderTextColor="#666666"
+              />
+              {roundsError ? <Text style={styles.errorText}>{roundsError}</Text> : null}
             </View>
-          )}
+            
+            {/* Continent Dropdown */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Continent</Text>
+              <TouchableOpacity onPress={() => setShowLocationModal(true)} style={styles.dropdown}>
+                <Text style={styles.dropdownText}>{selectedContinent || 'Select Continent'}</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Team Size */}
-          <View>
-            <TextInput 
-              placeholder="Team Size" 
-              value={team_size} 
-              onChangeText={handleTeamSizeChange} 
-              style={[styles.input, teamSizeError ? styles.errorInput : null]} 
-              keyboardType="numeric"
-            />
-            {teamSizeError ? <Text style={styles.errorText}>{teamSizeError}</Text> : null}
-          </View>
-          
-          {/* Revenue */}
-          <View>
-            <TextInput 
-              placeholder="Revenue in $USD" 
-              value={revenue_usd} 
-              onChangeText={handleRevenueChange} 
-              style={[styles.input, revenueError ? styles.errorInput : null]} 
-              keyboardType="numeric"
-            />
-            {revenueError ? <Text style={styles.errorText}>{revenueError}</Text> : null}
-          </View>
+            {/* Continent Selection Modal */}
+            <Modal
+              visible={showLocationModal}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowLocationModal(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.selectionModalContent}>
+                  <Text style={styles.modalTitle}>Select Continent</Text>
+                  <ScrollView style={styles.selectionScrollView}>
+                    {Object.keys(countriesByContinent).map(continent => (
+                      <TouchableOpacity
+                        key={continent}
+                        style={styles.selectionOption}
+                        onPress={() => {
+                          handleContinentSelection(continent);
+                          setShowLocationModal(false);
+                        }}
+                      >
+                        <Text style={[
+                          styles.selectionOptionText,
+                          selectedContinent === continent && styles.selectedOptionText
+                        ]}>
+                          {continent}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity 
+                    style={styles.closeButton}
+                    onPress={() => setShowLocationModal(false)}
+                  >
+                    <Text style={styles.closeButtonText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
 
-          {/* Consumer Base */}
-          <View>
-            <TextInput 
-              placeholder="Consumer Base (Number of customers)" 
-              value={consumer_base} 
-              onChangeText={handleConsumerBaseChange} 
-              style={[styles.input, consumerbaseError ? styles.errorInput : null]} 
-              keyboardType="numeric"
-            />
-            {consumerbaseError ? <Text style={styles.errorText}>{consumerbaseError}</Text> : null}
-          </View>
+            {/* Country Text Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Country</Text>
+              <TextInput 
+                placeholder="Enter country name" 
+                value={country} 
+                onChangeText={setCountry} 
+                style={styles.input}
+                placeholderTextColor="#666666"
+              />
+            </View>
+            
+            {/* Stage of Business Dropdown */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Stage of Business</Text>
+              <TouchableOpacity onPress={() => setShowStageModal(true)} style={styles.dropdown}>
+                <Text style={styles.dropdownText}>{stage_of_business || 'Select Stage'}</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Photo Upload */}
-          <TouchableOpacity onPress={pickImage} style={styles.uploadButton}>
-            <Text style={styles.uploadButtonText}>Upload Photo</Text>
-          </TouchableOpacity>
-          {image && <Image source={{ uri: image }} style={styles.uploadedImage} />}
+            {/* Stage Selection Modal */}
+            <Modal
+              visible={showStageModal}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowStageModal(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.selectionModalContent}>
+                  <Text style={styles.modalTitle}>Select Stage of Business</Text>
+                  <ScrollView style={styles.selectionScrollView}>
+                    {stages.map(stage => (
+                      <TouchableOpacity
+                        key={stage}
+                        style={styles.selectionOption}
+                        onPress={() => {
+                          handleSelection(stage, 'stage');
+                          setShowStageModal(false);
+                        }}
+                      >
+                        <Text style={[
+                          styles.selectionOptionText,
+                          stage_of_business === stage && styles.selectedOptionText
+                        ]}>
+                          {stage}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity 
+                    style={styles.closeButton}
+                    onPress={() => setShowStageModal(false)}
+                  >
+                    <Text style={styles.closeButtonText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
 
-          {/* Action Buttons with Round Corners */}
-          <View style={styles.buttonsContainer}>
-            <TouchableOpacity style={styles.roundButton} onPress={handleSubmit}>
-              <Text style={styles.buttonText}>Submit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.roundButton} onPress={onClose}>
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
+            {/* Industry Dropdown */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Industry</Text>
+              <TouchableOpacity onPress={() => setShowIndustryModal(true)} style={styles.dropdown}>
+                <Text style={styles.dropdownText}>{industry || 'Select Industry'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Industry Selection Modal */}
+            <Modal
+              visible={showIndustryModal}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowIndustryModal(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.selectionModalContent}>
+                  <Text style={styles.modalTitle}>Select Industry</Text>
+                  <ScrollView style={styles.selectionScrollView}>
+                    {industries.map(industryOption => (
+                      <TouchableOpacity
+                        key={industryOption}
+                        style={styles.selectionOption}
+                        onPress={() => {
+                          handleSelection(industryOption, 'industry');
+                          setShowIndustryModal(false);
+                        }}
+                      >
+                        <Text style={[
+                          styles.selectionOptionText,
+                          industry === industryOption && styles.selectedOptionText
+                        ]}>
+                          {industryOption}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity 
+                    style={styles.closeButton}
+                    onPress={() => setShowIndustryModal(false)}
+                  >
+                    <Text style={styles.closeButtonText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
+            {/* Team Size */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Team Size</Text>
+              <TextInput 
+                placeholder="Enter number of team members" 
+                value={team_size} 
+                onChangeText={handleTeamSizeChange} 
+                style={[styles.input, teamSizeError ? styles.errorInput : null]} 
+                keyboardType="numeric"
+                placeholderTextColor="#666666"
+              />
+              {teamSizeError ? <Text style={styles.errorText}>{teamSizeError}</Text> : null}
+            </View>
+            
+            {/* Revenue */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Revenue (USD)</Text>
+              <TextInput 
+                placeholder="Enter revenue amount" 
+                value={revenue_usd} 
+                onChangeText={handleRevenueChange} 
+                style={[styles.input, revenueError ? styles.errorInput : null]} 
+                keyboardType="numeric"
+                placeholderTextColor="#666666"
+              />
+              {revenueError ? <Text style={styles.errorText}>{revenueError}</Text> : null}
+            </View>
+
+            {/* Consumer Base */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Consumer Base</Text>
+              <TextInput 
+                placeholder="Enter number of customers" 
+                value={consumer_base} 
+                onChangeText={handleConsumerBaseChange} 
+                style={[styles.input, consumerbaseError ? styles.errorInput : null]} 
+                keyboardType="numeric"
+                placeholderTextColor="#666666"
+              />
+              {consumerbaseError ? <Text style={styles.errorText}>{consumerbaseError}</Text> : null}
+            </View>
+
+            {/* Photo Upload */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Startup Logo</Text>
+              <TouchableOpacity onPress={pickImage} style={styles.uploadButton}>
+                <Text style={styles.uploadButtonText}>{image ? 'Change Photo' : 'Upload Photo'}</Text>
+              </TouchableOpacity>
+              {image && <Image source={{ uri: image }} style={styles.uploadedImage} />}
+            </View>
+
+            {/* Action Buttons with Round Corners */}
+            <View style={styles.buttonsContainer}>
+              <TouchableOpacity style={styles.roundButton} onPress={handleSubmit}>
+                <Text style={styles.buttonText}>Submit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.roundButton} onPress={onClose}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingTop: 40,
+    paddingBottom: 40,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
     alignItems: 'center',
   },
   modalContent: {
@@ -437,29 +545,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
     borderRadius: 15,
     marginHorizontal: 20,
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    zIndex: 999, // Ensure the overlay is on top
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 40,
   },
   title: {
     fontSize: 26,
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
+    marginBottom: 30,
+    marginTop: 10,
+  },
+  inputContainer: {
     marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginBottom: 10,
+    fontWeight: '500',
   },
   input: {
     borderWidth: 1,
     borderColor: '#1DB954',
-    marginBottom: 15,
     padding: 12,
     borderRadius: 10,
     color: '#FFFFFF',
@@ -480,19 +588,13 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: '#1DB954',
-    padding: 10,
+    padding: 12,
     borderRadius: 10,
-    marginBottom: 15,
-    justifyContent: 'center',
+    backgroundColor: '#333333',
   },
   dropdownText: {
     fontSize: 16,
     color: '#FFFFFF',
-  },
-  selectedItemsText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginTop: 5,
   },
   roundButton: {
     padding: 12,
@@ -540,6 +642,64 @@ const styles = StyleSheet.create({
     marginTop: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  selectionModalContent: {
+    width: '85%',
+    maxHeight: '80%',
+    backgroundColor: '#121212',
+    borderRadius: 15,
+    padding: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  selectionScrollView: {
+    maxHeight: '70%',
+    marginVertical: 10,
+    width: '100%',
+  },
+  selectionOption: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+    width: '100%',
+    alignItems: 'center',
+  },
+  selectionOptionText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    width: '100%',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 20,
+    width: '100%',
+  },
+  closeButton: {
+    backgroundColor: '#1DB954',
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 20,
+    alignItems: 'center',
+    width: '100%',
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  selectedOptionText: {
+    color: '#1DB954',
+    fontWeight: 'bold',
   },
 });
 

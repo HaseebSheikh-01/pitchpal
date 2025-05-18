@@ -120,7 +120,7 @@ export default function LoginScreen() {
           placeholderTextColor="#999"
           keyboardType="email-address"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(text) => setEmail(text.toLowerCase())}
         />
         {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
 

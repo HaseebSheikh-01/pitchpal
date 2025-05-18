@@ -238,7 +238,7 @@ const StartupDashboard: React.FC = () => {
       {/* Logout Button - Only visible on home page */}
       {currentPage === 'home' && (
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <MaterialIcons name="logout" size={20} color="white" style={{ marginRight: 8 }} />
+          <MaterialIcons name="logout" size={18} color="#FF4444" style={{ marginRight: 6 }} />
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
       )}
@@ -383,24 +383,24 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     position: 'absolute',
-    bottom: 80, // Position above bottom nav
+    bottom: 80,
     right: 20,
-    backgroundColor: '#4CAF50',
+    flexDirection: "row",
+    backgroundColor: "transparent",
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    paddingVertical: 8,
     borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: '#FF4444',
+    width: 'auto',
+    marginRight: 20,
   },
   logoutButtonText: {
-    color: 'white',
+    color: "#FF4444",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 
