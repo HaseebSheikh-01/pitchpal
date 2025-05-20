@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "700",
     color: "#FFFFFF",
-    marginTop: 30,
+    marginTop: 60,
     marginBottom: 8,
     textAlign: "center",
   },
@@ -303,6 +303,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+    zIndex: 1,
   },
   backButtonText: {
     color: "#FFFFFF",

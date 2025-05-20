@@ -13,6 +13,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import API_IP from '../../constants/apiConfig';
+import { Ionicons, FontAwesome, MaterialIcons } from "@expo/vector-icons";
+import { useRouter } from 'expo-router';
 
 // Types
 interface Startup {
@@ -22,11 +24,40 @@ interface Startup {
   contactLink: string;
   email?: string;
   userId: string;
+  isContacted?: boolean;
 }
 
 interface UserDetails {
   name: string;
   email: string;
+}
+
+function BottomNavBar({ selected }: { selected: "home" | "saved" | "rejected" | "profile" }) {
+  const router = useRouter();
+
+  return (
+    <View style={styles.bottomNav}>
+      <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(dashboard)/InvestorDashboard")}>
+        <Ionicons name="home" size={28} color={selected === "home" ? "#1E90FF" : "#888"} />
+        <Text style={[styles.navText, selected === "home" && styles.navTextSelected]}>Home</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(dashboard)/SavedStartups")}>
+        <FontAwesome name="heart" size={28} color={selected === "saved" ? "#1E90FF" : "#888"} />
+        <Text style={[styles.navText, selected === "saved" && styles.navTextSelected]}>Saved</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(dashboard)/RejectedStartups")}>
+        <Ionicons name="close-circle" size={28} color={selected === "rejected" ? "#1E90FF" : "#888"} />
+        <Text style={[styles.navText, selected === "rejected" && styles.navTextSelected]}>Rejected</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(dashboard)/ProfileSetting")}>
+        <MaterialIcons name="person" size={28} color={selected === "profile" ? "#1E90FF" : "#888"} />
+        <Text style={[styles.navText, selected === "profile" && styles.navTextSelected]}>Profile</Text>
+      </TouchableOpacity>
+    </View>
+  );
 }
 
 export default function SavedStartups() {
@@ -38,18 +69,51 @@ export default function SavedStartups() {
 
   useEffect(() => {
     const fetchSavedStartups = async () => {
-      const saved = await AsyncStorage.getItem('savedStartups');
-      setSavedStartups(saved ? JSON.parse(saved) : []);
+      try {
+        // Get saved startups
+        const saved = await AsyncStorage.getItem('savedStartups');
+        const savedList = saved ? JSON.parse(saved) : [];
+
+        // Get contacted startups
+        const contacted = await AsyncStorage.getItem('contactedStartups');
+        const contactedList = contacted ? JSON.parse(contacted) : [];
+
+        // Mark startups as contacted if they're in the contacted list
+        const updatedSavedList = savedList.map((startup: Startup) => ({
+          ...startup,
+          isContacted: contactedList.some((c: Startup) => c.id === startup.id)
+        }));
+
+        setSavedStartups(updatedSavedList);
+      } catch (error) {
+        console.error('Error fetching saved startups:', error);
+      }
     };
     fetchSavedStartups();
   }, []);
 
   const handleRemoveStartup = async (startupId: string) => {
-    const saved = await AsyncStorage.getItem('savedStartups');
-    const updated = saved ? JSON.parse(saved).filter((s: Startup) => s.id !== startupId) : [];
-    await AsyncStorage.setItem('savedStartups', JSON.stringify(updated));
-    setSavedStartups(updated);
-    Alert.alert('Removed', 'Startup has been removed from your saved list!');
+    try {
+      // Remove from saved startups list
+      const saved = await AsyncStorage.getItem('savedStartups');
+      const updated = saved ? JSON.parse(saved).filter((s: Startup) => s.id !== startupId) : [];
+      await AsyncStorage.setItem('savedStartups', JSON.stringify(updated));
+      setSavedStartups(updated);
+
+      // Decrement saved startups count
+      const savedCountStr = await AsyncStorage.getItem('startupsSavedCount');
+      if (savedCountStr) {
+        const savedCount = parseInt(savedCountStr, 10);
+        if (savedCount > 0) {
+          await AsyncStorage.setItem('startupsSavedCount', (savedCount - 1).toString());
+        }
+      }
+
+      Alert.alert('Removed', 'Startup has been removed from your saved list!');
+    } catch (error) {
+      console.error('Error removing startup:', error);
+      Alert.alert('Error', 'Failed to remove startup from saved list');
+    }
   };
 
   const handleContact = async (startup: Startup) => {
@@ -97,7 +161,20 @@ export default function SavedStartups() {
       });
 
       if (contactRes.ok) {
-        // Increment successful matches count when contact is successful
+        // Store the contacted startup
+        const contactedStartups = await AsyncStorage.getItem('contactedStartups');
+        const currentContacted = contactedStartups ? JSON.parse(contactedStartups) : [];
+        const updatedContacted = [...currentContacted, { ...startup, timestamp: new Date().toISOString() }];
+        await AsyncStorage.setItem('contactedStartups', JSON.stringify(updatedContacted));
+
+        // Update the local state to mark the startup as contacted
+        setSavedStartups(prevStartups => 
+          prevStartups.map(s => 
+            s.id === startup.id ? { ...s, isContacted: true } : s
+          )
+        );
+
+        // Increment successful matches count
         try {
           const matchedCountStr = await AsyncStorage.getItem('successfulMatchesCount');
           const matchedCount = matchedCountStr ? parseInt(matchedCountStr, 10) : 0;
@@ -127,22 +204,29 @@ export default function SavedStartups() {
         <Text style={styles.startupDescription}>{item.description}</Text>
       </View>
       <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[
-            styles.contactButton,
-            loadingStartupId === item.id && styles.disabledButton,
-          ]}
-          onPress={() => handleContact(item)}
-          disabled={loadingStartupId === item.id}
-        >
-          <View style={styles.buttonContent}>
-            {loadingStartupId === item.id ? (
-              <ActivityIndicator color="#FFF" size="small" />
-            ) : (
-              <Text style={styles.contactButtonText}>Contact</Text>
-            )}
+        {item.isContacted ? (
+          <View style={styles.contactedButton}>
+            <MaterialIcons name="email" size={20} color="#4CAF50" style={{ marginRight: 8 }} />
+            <Text style={styles.contactedButtonText}>Contacted</Text>
           </View>
-        </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.contactButton,
+              loadingStartupId === item.id && styles.disabledButton,
+            ]}
+            onPress={() => handleContact(item)}
+            disabled={loadingStartupId === item.id}
+          >
+            <View style={styles.buttonContent}>
+              {loadingStartupId === item.id ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.contactButtonText}>Contact</Text>
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.removeButton}
@@ -203,6 +287,8 @@ export default function SavedStartups() {
           </View>
         </View>
       </Modal>
+
+      <BottomNavBar selected="saved" />
     </SafeAreaView>
   );
 }
@@ -340,6 +426,50 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: '#FFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  bottomNav: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    backgroundColor: "#1E1E1E",
+    paddingVertical: 10,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#333333',
+    paddingBottom: 20,
+  },
+  navItem: {
+    alignItems: "center",
+  },
+  navText: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 4,
+  },
+  navTextSelected: {
+    color: "#1E90FF",
+    fontWeight: "600",
+  },
+  contactedButton: {
+    backgroundColor: '#4CAF5020',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  contactedButtonText: {
+    color: '#4CAF50',
     fontWeight: '600',
   },
 });

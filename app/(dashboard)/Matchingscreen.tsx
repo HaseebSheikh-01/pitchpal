@@ -36,6 +36,14 @@ type Startup = {
   image: string;
 };
 
+type MetricsData = {
+  successProbability: number;
+  marketFit: number;
+  teamStrength: number;
+  financialHealth: number;
+  growthPotential: number;
+};
+
 function GuidanceModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal
@@ -98,6 +106,7 @@ export default function Matchingscreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [showGuidance, setShowGuidance] = useState(false);
+  const [metricsData, setMetricsData] = useState<MetricsData | null>(null);
 
   useEffect(() => {
     const initialize = async () => {
@@ -206,6 +215,25 @@ export default function Matchingscreen() {
       }
     } else if (direction === 'left') {
       await leftSwipe(swipedStartup.id);
+      
+      // Store rejected startup
+      try {
+        const rejectedStartups = await AsyncStorage.getItem('rejectedStartups');
+        const currentRejected = rejectedStartups ? JSON.parse(rejectedStartups) : [];
+        
+        // Check if startup is already in rejected list
+        const isAlreadyRejected = currentRejected.some((startup: Startup) => startup.id === swipedStartup.id);
+        
+        if (!isAlreadyRejected) {
+          currentRejected.push({
+            ...swipedStartup,
+            rejectedAt: new Date().toISOString()
+          });
+          await AsyncStorage.setItem('rejectedStartups', JSON.stringify(currentRejected));
+        }
+      } catch (error) {
+        console.error('Error storing rejected startup:', error);
+      }
     }
 
     setStartups(remaining);
@@ -299,22 +327,53 @@ export default function Matchingscreen() {
     setShowGuidance(false);
   };
 
-  // Add function to generate random probability
-  const generateRandomProbability = () => {
-    return Math.floor(Math.random() * (80 - 30 + 1)) + 30; // Random number between 30 and 80
+  const fetchMetricsData = async (startupId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${API_IP}/api/startup-metrics/${startupId}`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch metrics');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching metrics:', error);
+      // Fallback to generated metrics if API fails
+      return generateMetricsData();
+    }
   };
 
-  // Add function to handle metrics view
-  const handleViewMetrics = (startup: Startup) => {
+  const generateMetricsData = (): MetricsData => {
+    return {
+      successProbability: Math.floor(Math.random() * (80 - 30 + 1)) + 30,
+      marketFit: Math.floor(Math.random() * (90 - 40 + 1)) + 40,
+      teamStrength: Math.floor(Math.random() * (85 - 35 + 1)) + 35,
+      financialHealth: Math.floor(Math.random() * (95 - 45 + 1)) + 45,
+      growthPotential: Math.floor(Math.random() * (88 - 38 + 1)) + 38,
+    };
+  };
+
+  const handleViewMetrics = async (startup: Startup) => {
     setIsMetricsLoading(true);
     setSelectedStartup(startup);
     setShowMetricsModal(true);
     
-    // Simulate loading delay
-    setTimeout(() => {
-      setSuccessProbability(generateRandomProbability());
+    try {
+      const metrics = await fetchMetricsData(startup.id);
+      setMetricsData(metrics);
+    } catch (error) {
+      console.error('Error loading metrics:', error);
+      Alert.alert('Error', 'Failed to load metrics. Please try again.');
+    } finally {
       setIsMetricsLoading(false);
-    }, 1500);
+    }
   };
 
   const renderStartups = () => {
@@ -395,14 +454,14 @@ export default function Matchingscreen() {
         {showEmoji && <Text style={styles.emoji}>{showEmoji}</Text>}
       </View>
 
-      {/* Metrics Modal */}
+      {/* Updated Metrics Modal */}
       <Modal
         visible={showMetricsModal}
         transparent
         animationType="fade"
         onRequestClose={() => {
           setShowMetricsModal(false);
-          setSuccessProbability(null);
+          setMetricsData(null);
           setSelectedStartup(null);
         }}
       >
@@ -413,19 +472,43 @@ export default function Matchingscreen() {
                 <ActivityIndicator size="large" color="#1DB954" />
                 <Text style={styles.metricsLoadingText}>Analyzing startup metrics...</Text>
               </>
-            ) : (
+            ) : metricsData && (
               <>
-                <Text style={styles.metricsTitle}>Success Probability Analysis</Text>
+                <Text style={styles.metricsTitle}>Startup Analysis</Text>
                 <Text style={styles.startupName}>{selectedStartup?.name}</Text>
-                <View style={styles.probabilityContainer}>
-                  <Text style={styles.probabilityText}>{successProbability}%</Text>
-                  <Text style={styles.probabilityLabel}>Success Probability</Text>
+                
+                <View style={styles.metricsGrid}>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricValue}>{metricsData.successProbability}%</Text>
+                    <Text style={styles.metricLabel}>Success Probability</Text>
+                  </View>
+                  
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricValue}>{metricsData.marketFit}%</Text>
+                    <Text style={styles.metricLabel}>Market Fit</Text>
+                  </View>
+                  
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricValue}>{metricsData.teamStrength}%</Text>
+                    <Text style={styles.metricLabel}>Team Strength</Text>
+                  </View>
+                  
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricValue}>{metricsData.financialHealth}%</Text>
+                    <Text style={styles.metricLabel}>Financial Health</Text>
+                  </View>
+                  
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricValue}>{metricsData.growthPotential}%</Text>
+                    <Text style={styles.metricLabel}>Growth Potential</Text>
+                  </View>
                 </View>
+
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={() => {
                     setShowMetricsModal(false);
-                    setSuccessProbability(null);
+                    setMetricsData(null);
                     setSelectedStartup(null);
                   }}
                 >
@@ -612,19 +695,31 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
-  probabilityContainer: {
-    alignItems: 'center',
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     marginVertical: 20,
+    width: '100%',
   },
-  probabilityText: {
-    fontSize: 48,
+  metricItem: {
+    width: '48%',
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  metricValue: {
+    fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#1DB954',
+    marginBottom: 4,
   },
-  probabilityLabel: {
-    fontSize: 16,
+  metricLabel: {
+    fontSize: 14,
     color: '#B2B2B2',
-    marginTop: 8,
+    textAlign: 'center',
   },
   closeButton: {
     backgroundColor: '#1DB954',
@@ -688,5 +783,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  bottomNav: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    backgroundColor: "#1E1E1E",
+    paddingVertical: 10,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#333333',
+    paddingBottom: 20,
   },
 });
