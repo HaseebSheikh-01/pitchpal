@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { Link, router } from "expo-router";
+import { Link, router, useRouter } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_IP from '../constants/apiConfig';
 
@@ -12,6 +12,7 @@ export default function LoginScreen() {
     password: ''
   });
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const validateEmail = (email: string): boolean => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,8 +56,45 @@ export default function LoginScreen() {
 
         const data = await response.json();
 
+        if (data.requiresTwoFactor) {
+          // 2FA required, trigger code send and navigate to 2FA screen
+          await fetch(`${API_IP}/auth/send-2fa-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          router.push({ pathname: '/two-factor-auth', params: { email } } as any);
+          return;
+        }
+
         if (!response.ok) {
-          Alert.alert("Login failed", data.message || "Invalid credentials");
+          if (response.status === 401 && data.message === "Please verify your email before logging in") {
+            Alert.alert(
+              "Email Not Verified",
+              "Your email is not verified. We will resend the verification code.",
+              [
+                {
+                  text: "OK",
+                  onPress: async () => {
+                    // Send verification code
+                    await fetch(`${API_IP}/auth/send-verification-code`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email })
+                    });
+                    // Route to verify-email page
+                    router.push({ pathname: '/verify-email', params: { email } } as any);
+                  }
+                }
+              ]
+            );
+          } else if (response.status === 401) {
+            Alert.alert("Login failed", "Invalid credentials");
+          } else if (response.status === 404) {
+            Alert.alert("Account Not Found", "This email does not exist. Please sign up.");
+          } else {
+            Alert.alert("Login failed", data.message || "Invalid credentials");
+          }
         } else {
           Alert.alert("Login success", `Welcome ${data.user.name}`);
 

@@ -83,10 +83,28 @@ export default function SignupScreen() {
         const data = await response.json();
 
         if (!response.ok) {
-          alert(data.message || "Signup failed.");
+          // Check for duplicate email and isEmailVerified in the response
+          if (data.message === "Email already registered") {
+            if (data.isEmailVerified) {
+              alert("Email already exists. Please use a different email or log in.");
+            } else {
+              // Email exists but not verified
+              alert("Your email is not verified. We will resend the verification code.");
+              // Send verification code
+              await fetch(`${API_IP}/auth/send-verification-code`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: formData.email })
+              });
+              // Route to verify-email page
+              router.push({ pathname: '/verify-email', params: { email: formData.email } } as any);
+            }
+          } else {
+            alert(data.message || "Signup failed.");
+          }
         } else {
           alert("Signup successful!");
-          router.replace("/login");
+          router.push({ pathname: '/verify-email', params: { email: formData.email } } as any);
         }
       } catch (error) {
         console.error("Signup error:", error);

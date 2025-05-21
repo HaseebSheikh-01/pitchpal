@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Modal, TextInput, TouchableOpacity, View, Text, StyleSheet, Button, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ScrollView, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import API_IP from '../../constants/apiConfig';
@@ -12,7 +12,10 @@ interface Startup {
   name: string;
   funding_total_usd: number;
   funding_rounds: number;
+  continent: string;
+  country: string;
   stage_of_business: string;
+  industry: string;
   team_size: number;
   revenue_usd: number;
   consumer_base: number;
@@ -23,9 +26,10 @@ interface EditStartupFormProps {
   visible: boolean;
   onClose: () => void;
   startup: Startup;
+  onUpdate: (updatedStartup: Startup) => void;
 }
 
-const EditStartupForm: React.FC<EditStartupFormProps> = ({ visible, onClose, startup }) => {
+const EditStartupForm: React.FC<EditStartupFormProps> = ({ visible, onClose, startup, onUpdate }) => {
   const [name, setName] = useState(startup?.name || '');
   const [funding_total_usd, setFundingTotalUsd] = useState(startup?.funding_total_usd?.toString() || '0');
   const [funding_rounds, setFundingRounds] = useState(startup?.funding_rounds?.toString() || '0');
@@ -35,6 +39,81 @@ const EditStartupForm: React.FC<EditStartupFormProps> = ({ visible, onClose, sta
   const [consumer_base, setConsumerBase] = useState(startup?.consumer_base?.toString() || '0');
   const [showStageModal, setShowStageModal] = useState(false);
 
+  // Error states
+  const [nameError, setNameError] = useState('');
+  const [fundingError, setFundingError] = useState('');
+  const [roundsError, setRoundsError] = useState('');
+  const [teamSizeError, setTeamSizeError] = useState('');
+  const [revenueError, setRevenueError] = useState('');
+  const [consumerBaseError, setConsumerBaseError] = useState('');
+
+  // Validation functions
+  const validateName = (text: string) => {
+    const nameRegex = /^[a-zA-Z0-9\s]+$/;
+    if (!text.trim()) {
+      setNameError('Name is required');
+      return false;
+    }
+    if (!nameRegex.test(text)) {
+      setNameError('Name can only contain letters, numbers, and spaces');
+      return false;
+    }
+    setNameError('');
+    return true;
+  };
+
+  const validateNumeric = (text: string, field: string) => {
+    const numericRegex = /^\d*$/;
+    if (!numericRegex.test(text)) {
+      switch (field) {
+        case 'funding':
+          setFundingError('Please enter numbers only');
+          return false;
+        case 'rounds':
+          setRoundsError('Please enter numbers only');
+          return false;
+        case 'team':
+          setTeamSizeError('Please enter numbers only');
+          return false;
+        case 'revenue':
+          setRevenueError('Please enter numbers only');
+          return false;
+        case 'consumer':
+          setConsumerBaseError('Please enter numbers only');
+          return false;
+      }
+    }
+    switch (field) {
+      case 'funding':
+        setFundingError('');
+        break;
+      case 'rounds':
+        setRoundsError('');
+        break;
+      case 'team':
+        setTeamSizeError('');
+        break;
+      case 'revenue':
+        setRevenueError('');
+        break;
+      case 'consumer':
+        setConsumerBaseError('');
+        break;
+    }
+    return true;
+  };
+
+  // Reset form fields when startup prop changes
+  useEffect(() => {
+    setName(startup?.name || '');
+    setFundingTotalUsd(startup?.funding_total_usd?.toString() || '0');
+    setFundingRounds(startup?.funding_rounds?.toString() || '0');
+    setStageOfBusiness(startup?.stage_of_business || '');
+    setTeamSize(startup?.team_size?.toString() || '0');
+    setRevenueUsd(startup?.revenue_usd?.toString() || '0');
+    setConsumerBase(startup?.consumer_base?.toString() || '0');
+  }, [startup]);
+
   // Add refs for each input field
   const nameRef = useRef<TextInput>(null);
   const fundingTotalRef = useRef<TextInput>(null);
@@ -42,6 +121,41 @@ const EditStartupForm: React.FC<EditStartupFormProps> = ({ visible, onClose, sta
   const teamSizeRef = useRef<TextInput>(null);
   const revenueRef = useRef<TextInput>(null);
   const consumerBaseRef = useRef<TextInput>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
+  const scrollToInput = (ref: React.RefObject<TextInput | null>) => {
+    if (ref.current && keyboardVisible) {
+      setTimeout(() => {
+        ref.current?.measure((x, y, width, height, pageX, pageY) => {
+          scrollViewRef.current?.scrollTo({
+            y: pageY - 100,
+            animated: true
+          });
+        });
+      }, 100);
+    }
+  };
 
   const handleStageSelection = (stage: string) => {
     setStageOfBusiness(stage);
@@ -49,6 +163,18 @@ const EditStartupForm: React.FC<EditStartupFormProps> = ({ visible, onClose, sta
   };
 
   const handleSubmit = async () => {
+    // Validate all fields before submission
+    const isNameValid = validateName(name);
+    const isFundingValid = validateNumeric(funding_total_usd, 'funding');
+    const isRoundsValid = validateNumeric(funding_rounds, 'rounds');
+    const isTeamSizeValid = validateNumeric(team_size, 'team');
+    const isRevenueValid = validateNumeric(revenue_usd, 'revenue');
+    const isConsumerBaseValid = validateNumeric(consumer_base, 'consumer');
+
+    if (!isNameValid || !isFundingValid || !isRoundsValid || !isTeamSizeValid || !isRevenueValid || !isConsumerBaseValid) {
+      return;
+    }
+
     if (!startup?.id) {
       console.error('Startup ID is missing');
       return;
@@ -59,10 +185,14 @@ const EditStartupForm: React.FC<EditStartupFormProps> = ({ visible, onClose, sta
       name: name || '',
       funding_total_usd: Number(funding_total_usd) || 0,
       funding_rounds: Number(funding_rounds) || 0,
+      continent: startup.continent,
+      country: startup.country,
       stage_of_business: stage_of_business || '',
+      industry: startup.industry,
       team_size: Number(team_size) || 0,
       revenue_usd: Number(revenue_usd) || 0,
       consumer_base: Number(consumer_base) || 0,
+      image: startup.image
     };
 
     try {
@@ -85,7 +215,8 @@ const EditStartupForm: React.FC<EditStartupFormProps> = ({ visible, onClose, sta
       if (response.ok) {
         const data = await response.json();
         console.log('Startup updated:', data);
-        onClose();  // Close the form on successful update
+        onUpdate(updatedStartup);
+        onClose();
       } else {
         const errorText = await response.text();
         console.error('Failed to update startup:', errorText);
@@ -105,131 +236,202 @@ const EditStartupForm: React.FC<EditStartupFormProps> = ({ visible, onClose, sta
         <KeyboardAvoidingView 
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
         >
           <TouchableWithoutFeedback onPress={dismissKeyboard}>
             <View style={styles.modalBackground}>
               <ScrollView 
+                ref={scrollViewRef}
                 contentContainerStyle={styles.scrollContent}
                 keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={true}
+                bounces={true}
               >
                 <View style={styles.modalContent}>
                   <Text style={styles.title}>Edit Startup</Text>
 
-                  <TextInput
-                    ref={nameRef}
-                    placeholder="Startup Name"
-                    value={name}
-                    onChangeText={setName}
-                    style={styles.input}
-                    returnKeyType="next"
-                    blurOnSubmit={false}
-                    onSubmitEditing={() => {
-                      setTimeout(() => {
-                        fundingTotalRef.current?.focus();
-                      }, 0);
-                    }}
-                  />
-                  <TextInput
-                    ref={fundingTotalRef}
-                    placeholder="Total Funding"
-                    value={funding_total_usd}
-                    onChangeText={setFundingTotalUsd}
-                    keyboardType="numbers-and-punctuation"
-                    style={styles.input}
-                    returnKeyType="next"
-                    blurOnSubmit={false}
-                    onSubmitEditing={() => {
-                      setTimeout(() => {
-                        fundingRoundsRef.current?.focus();
-                      }, 0);
-                    }}
-                  />
-                  <TextInput
-                    ref={fundingRoundsRef}
-                    placeholder="Funding Rounds"
-                    value={funding_rounds}
-                    onChangeText={setFundingRounds}
-                    keyboardType="numbers-and-punctuation"
-                    style={styles.input}
-                    returnKeyType="next"
-                    blurOnSubmit={false}
-                    onSubmitEditing={() => {
-                      setTimeout(() => {
-                        teamSizeRef.current?.focus();
-                      }, 0);
-                    }}
-                  />
-                  
-                  {/* Stage of Business Dropdown */}
-                  <TouchableOpacity onPress={() => {
-                    dismissKeyboard();
-                    setShowStageModal(true);
-                  }} style={styles.dropdown}>
-                    <Text style={styles.dropdownText}>Stage of Business</Text>
-                    <Text style={styles.selectedItemsText}>{stage_of_business || 'Select Stage'}</Text>
-                  </TouchableOpacity>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Startup Name</Text>
+                    <TextInput
+                      ref={nameRef}
+                      placeholder="Enter startup name"
+                      value={name}
+                      onChangeText={(text) => {
+                        setName(text);
+                        validateName(text);
+                      }}
+                      onFocus={() => scrollToInput(nameRef)}
+                      style={[styles.input, nameError ? styles.errorInput : null]}
+                      returnKeyType="next"
+                      blurOnSubmit={false}
+                      onSubmitEditing={() => {
+                        setTimeout(() => {
+                          fundingTotalRef.current?.focus();
+                        }, 0);
+                      }}
+                    />
+                    {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Total Funding (USD)</Text>
+                    <TextInput
+                      ref={fundingTotalRef}
+                      placeholder="Enter total funding"
+                      value={funding_total_usd}
+                      onChangeText={(text) => {
+                        setFundingTotalUsd(text);
+                        validateNumeric(text, 'funding');
+                      }}
+                      onFocus={() => scrollToInput(fundingTotalRef)}
+                      keyboardType="numeric"
+                      style={[styles.input, fundingError ? styles.errorInput : null]}
+                      returnKeyType="next"
+                      blurOnSubmit={false}
+                      onSubmitEditing={() => {
+                        setTimeout(() => {
+                          fundingRoundsRef.current?.focus();
+                        }, 0);
+                      }}
+                    />
+                    {fundingError ? <Text style={styles.errorText}>{fundingError}</Text> : null}
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Funding Rounds</Text>
+                    <TextInput
+                      ref={fundingRoundsRef}
+                      placeholder="Enter number of funding rounds"
+                      value={funding_rounds}
+                      onChangeText={(text) => {
+                        setFundingRounds(text);
+                        validateNumeric(text, 'rounds');
+                      }}
+                      onFocus={() => scrollToInput(fundingRoundsRef)}
+                      keyboardType="numeric"
+                      style={[styles.input, roundsError ? styles.errorInput : null]}
+                      returnKeyType="next"
+                      blurOnSubmit={false}
+                      onSubmitEditing={() => {
+                        setTimeout(() => {
+                          teamSizeRef.current?.focus();
+                        }, 0);
+                      }}
+                    />
+                    {roundsError ? <Text style={styles.errorText}>{roundsError}</Text> : null}
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Stage of Business</Text>
+                    <TouchableOpacity 
+                      onPress={() => {
+                        dismissKeyboard();
+                        setShowStageModal(true);
+                      }} 
+                      style={styles.dropdown}
+                    >
+                      <Text style={styles.dropdownText}>{stage_of_business || 'Select Stage'}</Text>
+                    </TouchableOpacity>
+                  </View>
 
                   {/* Stage Modal */}
                   {showStageModal && (
                     <View style={styles.modalOverlay}>
-                      <View style={styles.modalContent}>
-                        <Text style={styles.title}>Select Stage of Business</Text>
-                        {stages.map(stage => (
-                          <TouchableOpacity
-                            key={stage}
-                            style={styles.optionButton}
-                            onPress={() => handleStageSelection(stage)}
-                          >
-                            <Text style={[styles.optionText, stage_of_business === stage && styles.optionTextSelected]}>
-                              {stage}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                        <Button title="Close" onPress={() => setShowStageModal(false)} color="#FF6347" />
+                      <View style={styles.selectionModalContent}>
+                        <Text style={styles.modalTitle}>Select Stage of Business</Text>
+                        <ScrollView style={styles.selectionScrollView}>
+                          {stages.map(stage => (
+                            <TouchableOpacity
+                              key={stage}
+                              style={styles.selectionOption}
+                              onPress={() => handleStageSelection(stage)}
+                            >
+                              <Text style={[
+                                styles.selectionOptionText,
+                                stage_of_business === stage && styles.selectedOptionText
+                              ]}>
+                                {stage}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                        <TouchableOpacity 
+                          style={styles.closeButton}
+                          onPress={() => setShowStageModal(false)}
+                        >
+                          <Text style={styles.closeButtonText}>Close</Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
                   )}
 
-                  <TextInput
-                    ref={teamSizeRef}
-                    placeholder="Team Size"
-                    value={team_size}
-                    onChangeText={setTeamSize}
-                    keyboardType="numbers-and-punctuation"
-                    style={styles.input}
-                    returnKeyType="next"
-                    blurOnSubmit={false}
-                    onSubmitEditing={() => {
-                      setTimeout(() => {
-                        revenueRef.current?.focus();
-                      }, 0);
-                    }}
-                  />
-                  <TextInput
-                    ref={revenueRef}
-                    placeholder="Revenue in USD"
-                    value={revenue_usd}
-                    onChangeText={setRevenueUsd}
-                    keyboardType="numbers-and-punctuation"
-                    style={styles.input}
-                    returnKeyType="next"
-                    blurOnSubmit={false}
-                    onSubmitEditing={() => {
-                      setTimeout(() => {
-                        consumerBaseRef.current?.focus();
-                      }, 0);
-                    }}
-                  />
-                  <TextInput
-                    ref={consumerBaseRef}
-                    placeholder="Consumer Base"
-                    value={consumer_base}
-                    onChangeText={setConsumerBase}
-                    keyboardType="numbers-and-punctuation"
-                    style={styles.input}
-                    returnKeyType="done"
-                    onSubmitEditing={dismissKeyboard}
-                  />
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Team Size</Text>
+                    <TextInput
+                      ref={teamSizeRef}
+                      placeholder="Enter team size"
+                      value={team_size}
+                      onChangeText={(text) => {
+                        setTeamSize(text);
+                        validateNumeric(text, 'team');
+                      }}
+                      onFocus={() => scrollToInput(teamSizeRef)}
+                      keyboardType="numeric"
+                      style={[styles.input, teamSizeError ? styles.errorInput : null]}
+                      returnKeyType="next"
+                      blurOnSubmit={false}
+                      onSubmitEditing={() => {
+                        setTimeout(() => {
+                          revenueRef.current?.focus();
+                        }, 0);
+                      }}
+                    />
+                    {teamSizeError ? <Text style={styles.errorText}>{teamSizeError}</Text> : null}
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Revenue (USD)</Text>
+                    <TextInput
+                      ref={revenueRef}
+                      placeholder="Enter revenue"
+                      value={revenue_usd}
+                      onChangeText={(text) => {
+                        setRevenueUsd(text);
+                        validateNumeric(text, 'revenue');
+                      }}
+                      onFocus={() => scrollToInput(revenueRef)}
+                      keyboardType="numeric"
+                      style={[styles.input, revenueError ? styles.errorInput : null]}
+                      returnKeyType="next"
+                      blurOnSubmit={false}
+                      onSubmitEditing={() => {
+                        setTimeout(() => {
+                          consumerBaseRef.current?.focus();
+                        }, 0);
+                      }}
+                    />
+                    {revenueError ? <Text style={styles.errorText}>{revenueError}</Text> : null}
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.label}>Consumer Base</Text>
+                    <TextInput
+                      ref={consumerBaseRef}
+                      placeholder="Enter consumer base size"
+                      value={consumer_base}
+                      onChangeText={(text) => {
+                        setConsumerBase(text);
+                        validateNumeric(text, 'consumer');
+                      }}
+                      onFocus={() => scrollToInput(consumerBaseRef)}
+                      keyboardType="numeric"
+                      style={[styles.input, consumerBaseError ? styles.errorInput : null]}
+                      returnKeyType="done"
+                      onSubmitEditing={dismissKeyboard}
+                    />
+                    {consumerBaseError ? <Text style={styles.errorText}>{consumerBaseError}</Text> : null}
+                  </View>
 
                   <View style={styles.buttonsContainer}>
                     <TouchableOpacity style={styles.roundButton} onPress={handleSubmit}>
@@ -263,6 +465,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingVertical: 20,
+    paddingBottom: Platform.OS === 'ios' ? 100 : 80,
   },
   modalContent: {
     width: '90%',
@@ -353,6 +556,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  inputContainer: {
+    marginBottom: 15,
+    width: '100%',
+  },
+  label: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 5,
+    fontWeight: '500',
+  },
+  errorInput: {
+    borderColor: '#FF4444',
+  },
+  errorText: {
+    color: '#FF4444',
+    fontSize: 12,
+    marginTop: 5,
+  },
+  selectionModalContent: {
+    backgroundColor: '#1E1E1E',
+    padding: 20,
+    borderRadius: 15,
+    width: '90%',
+    maxHeight: '90%',
+    zIndex: 2,
+    alignSelf: 'center',
+    marginVertical: 20,
+  },
+  modalTitle: {
+    fontSize: 26,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  selectionScrollView: {
+    flexGrow: 1,
+    marginBottom: 20,
+  },
+  selectionOption: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+    width: '100%',
+  },
+  selectionOptionText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  selectedOptionText: {
+    color: '#1DB954',
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    padding: 12,
+    borderRadius: 50,
+    backgroundColor: '#1DB954',
+    width: '100%',
+    alignItems: 'center',
+  },
+  closeButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

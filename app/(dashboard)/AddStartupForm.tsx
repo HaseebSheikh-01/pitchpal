@@ -36,12 +36,24 @@ const stages = [
 ];
 
 const countriesByContinent: CountriesByContinent = {
-  'North America': ['USA', 'Canada', 'Mexico'],
-  'Europe': ['Germany', 'France', 'Italy', 'Spain', 'UK', 'Poland'],
-  'Asia': ['China', 'India', 'Japan', 'South Korea', 'Singapore', 'Thailand'],
-  'South America': ['Brazil', 'Argentina', 'Chile', 'Colombia', 'Peru'],
-  'Africa': ['Nigeria', 'South Africa', 'Kenya', 'Egypt', 'Morocco', 'Ghana'],
-  'Australia': ['Australia']
+  'Africa': [
+    'Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cameroon', 'Central African Republic', 'Chad', 'Comoros', 'Congo (Congo-Brazzaville)', 'Democratic Republic of the Congo', 'Djibouti', 'Egypt', 'Equatorial Guinea', 'Eritrea', 'Eswatini (fmr. "Swaziland")', 'Ethiopia', 'Gabon', 'Gambia', 'Ghana', 'Guinea', 'Guinea-Bissau', 'Ivory Coast', 'Kenya', 'Lesotho', 'Liberia', 'Libya', 'Madagascar', 'Malawi', 'Mali', 'Mauritania', 'Mauritius', 'Morocco', 'Mozambique', 'Namibia', 'Niger', 'Nigeria', 'Rwanda', 'Sao Tome and Principe', 'Senegal', 'Seychelles', 'Sierra Leone', 'Somalia', 'South Africa', 'South Sudan', 'Sudan', 'Tanzania', 'Togo', 'Tunisia', 'Uganda', 'Zambia', 'Zimbabwe'
+  ],
+  'Asia': [
+    'Afghanistan', 'Armenia', 'Azerbaijan', 'Bahrain', 'Bangladesh', 'Bhutan', 'Brunei', 'Cambodia', 'China', 'Cyprus', 'Georgia', 'India', 'Indonesia', 'Iran', 'Iraq', 'Israel', 'Japan', 'Jordan', 'Kazakhstan', 'Kuwait', 'Kyrgyzstan', 'Laos', 'Lebanon', 'Malaysia', 'Maldives', 'Mongolia', 'Myanmar (Burma)', 'Nepal', 'North Korea', 'Oman', 'Pakistan', 'Palestine', 'Philippines', 'Qatar', 'Russia', 'Saudi Arabia', 'Singapore', 'South Korea', 'Sri Lanka', 'Syria', 'Taiwan', 'Tajikistan', 'Thailand', 'Timor-Leste', 'Turkey', 'Turkmenistan', 'United Arab Emirates', 'Uzbekistan', 'Vietnam', 'Yemen'
+  ],
+  'Europe': [
+    'Albania', 'Andorra', 'Armenia', 'Austria', 'Azerbaijan', 'Belarus', 'Belgium', 'Bosnia and Herzegovina', 'Bulgaria', 'Croatia', 'Cyprus', 'Czechia (Czech Republic)', 'Denmark', 'Estonia', 'Finland', 'France', 'Georgia', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy', 'Kazakhstan', 'Kosovo', 'Latvia', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Malta', 'Moldova', 'Monaco', 'Montenegro', 'Netherlands', 'North Macedonia', 'Norway', 'Poland', 'Portugal', 'Romania', 'Russia', 'San Marino', 'Serbia', 'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'Turkey', 'Ukraine', 'United Kingdom', 'Vatican City'
+  ],
+  'North America': [
+    'Antigua and Barbuda', 'Bahamas', 'Barbados', 'Belize', 'Canada', 'Costa Rica', 'Cuba', 'Dominica', 'Dominican Republic', 'El Salvador', 'Grenada', 'Guatemala', 'Haiti', 'Honduras', 'Jamaica', 'Mexico', 'Nicaragua', 'Panama', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Trinidad and Tobago', 'United States'
+  ],
+  'Oceania': [
+    'Australia', 'Fiji', 'Kiribati', 'Marshall Islands', 'Micronesia', 'Nauru', 'New Zealand', 'Palau', 'Papua New Guinea', 'Samoa', 'Solomon Islands', 'Tonga', 'Tuvalu', 'Vanuatu'
+  ],
+  'South America': [
+    'Argentina', 'Bolivia', 'Brazil', 'Chile', 'Colombia', 'Ecuador', 'Guyana', 'Paraguay', 'Peru', 'Suriname', 'Uruguay', 'Venezuela'
+  ]
 };
 
 const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAddStartup }) => {
@@ -61,6 +73,7 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
   const [showIndustryModal, setShowIndustryModal] = useState(false);
   const [showStageModal, setShowStageModal] = useState(false);
   const [selectedContinent, setSelectedContinent] = useState('');
+  const [showCountryModal, setShowCountryModal] = useState(false);
 
   // Error states
   const [fundingError, setFundingError] = useState('');
@@ -345,17 +358,58 @@ const AddStartupForm: React.FC<AddStartupFormProps> = ({ visible, onClose, onAdd
               </View>
             </Modal>
 
-            {/* Country Text Input */}
+            {/* Country Dropdown */}
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Country</Text>
-              <TextInput 
-                placeholder="Enter country name" 
-                value={country} 
-                onChangeText={setCountry} 
-                style={styles.input}
-                placeholderTextColor="#666666"
-              />
+              <TouchableOpacity
+                onPress={() => selectedContinent && setShowCountryModal(true)}
+                style={[styles.dropdown, !selectedContinent && { backgroundColor: '#222', borderColor: '#555' }]}
+                disabled={!selectedContinent}
+              >
+                <Text style={[styles.dropdownText, !selectedContinent && { color: '#888' }]}>
+                  {country || (!selectedContinent ? 'Select a continent first' : 'Select Country')}
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {/* Country Selection Modal */}
+            <Modal
+              visible={showCountryModal}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowCountryModal(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.selectionModalContent}>
+                  <Text style={styles.modalTitle}>Select Country</Text>
+                  <ScrollView style={styles.selectionScrollView}>
+                    {(selectedContinent ? countriesByContinent[selectedContinent] : []).map(countryOption => (
+                      <TouchableOpacity
+                        key={countryOption}
+                        style={styles.selectionOption}
+                        onPress={() => {
+                          setCountry(countryOption);
+                          setShowCountryModal(false);
+                        }}
+                      >
+                        <Text style={[
+                          styles.selectionOptionText,
+                          country === countryOption && styles.selectedOptionText
+                        ]}>
+                          {countryOption}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity 
+                    style={styles.closeButton}
+                    onPress={() => setShowCountryModal(false)}
+                  >
+                    <Text style={styles.closeButtonText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
             
             {/* Stage of Business Dropdown */}
             <View style={styles.inputContainer}>

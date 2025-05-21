@@ -72,7 +72,7 @@ const StartupDashboard: React.FC = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log('Fetched startups data:', data);
+      console.log('Fetched startups data (after update):', data);
       if (data && Array.isArray(data.startups)) {
         const normalizedStartups = data.startups.map((startup: any) => ({
           ...startup,
@@ -144,10 +144,13 @@ const StartupDashboard: React.FC = () => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      await fetchStartups(); // Refresh the startups list after updating
+      // Instantly update the local state for immediate UI feedback
+      setStartups(prevStartups => prevStartups.map(s => s.id === updatedStartup.id ? { ...s, ...updatedStartup } : s));
       setUpdateModalVisible(false);
       setSnackbarVisible(true);
       setTimeout(() => setSnackbarVisible(false), 2000);
+      // Optionally, fetch from backend to ensure data is in sync
+      fetchStartups();
     } catch (error) {
       console.error('Failed to update startup:', error);
       Alert.alert('Error', 'Failed to update startup. Please try again later.');
@@ -232,6 +235,7 @@ const StartupDashboard: React.FC = () => {
           visible={isUpdateModalVisible}
           onClose={() => setUpdateModalVisible(false)}
           startup={selectedStartup}
+          onUpdate={updateStartup}
         />
       )}
 
@@ -357,7 +361,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#3A3A3A',
     position: 'absolute',
-    bottom: 0,
+    bottom: 30,
     left: 0,
     right: 0,
     height: 60,
@@ -383,7 +387,7 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 110,
     right: 20,
     flexDirection: "row",
     backgroundColor: "transparent",
@@ -396,6 +400,7 @@ const styles = StyleSheet.create({
     borderColor: '#FF4444',
     width: 'auto',
     marginRight: 20,
+    marginBottom: 10,
   },
   logoutButtonText: {
     color: "#FF4444",

@@ -33,6 +33,7 @@ interface Startup {
   image?: string;
   contact_email?: string;
   userId: string;
+  isContacted: boolean;
 }
 
 interface UserDetails {
@@ -50,6 +51,7 @@ export default function Discover() {
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
   const [loadingStartupId, setLoadingStartupId] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [contactedStartups, setContactedStartups] = useState<string[]>([]);
 
   // Fetch startups from the API
   useEffect(() => {
@@ -83,6 +85,15 @@ export default function Discover() {
       }
     };
     fetchStartups();
+  }, []);
+
+  useEffect(() => {
+    const fetchContacted = async () => {
+      const contacted = await AsyncStorage.getItem('contactedStartups');
+      const contactedList = contacted ? JSON.parse(contacted) : [];
+      setContactedStartups(contactedList.map((s: any) => s.id));
+    };
+    fetchContacted();
   }, []);
 
   // Animation for press effect
@@ -145,6 +156,7 @@ export default function Discover() {
         
         setSelectedStartup(startup);
         setShowSuccessModal(true);
+        setContactedStartups(prev => [...prev, startup.id.toString()]);
       } else {
         const error = await contactRes.text();
         throw new Error(error);
@@ -219,23 +231,30 @@ export default function Discover() {
                       <Text style={styles.revenue}>${startup.revenue_usd.toLocaleString()}</Text>
                     </View>
                   )}
-                  <TouchableOpacity 
-                    style={[
-                      styles.contactButton,
-                      loadingStartupId === startup.id.toString() && styles.disabledButton
-                    ]}
-                    onPress={() => handleContact(startup)}
-                    disabled={loadingStartupId === startup.id.toString()}
-                  >
-                    {loadingStartupId === startup.id.toString() ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                    ) : (
-                      <>
-                        <MaterialIcons name="email" size={20} color="#FFFFFF" />
-                        <Text style={styles.contactButtonText}>Contact Startup</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
+                  {contactedStartups.includes(startup.id.toString()) ? (
+                    <View style={styles.contactedButton}>
+                      <MaterialIcons name="email" size={20} color="#4CAF50" style={{ marginRight: 8 }} />
+                      <Text style={styles.contactedButtonText}>Contacted</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity 
+                      style={[
+                        styles.contactButton,
+                        loadingStartupId === startup.id.toString() && styles.disabledButton
+                      ]}
+                      onPress={() => handleContact(startup)}
+                      disabled={loadingStartupId === startup.id.toString()}
+                    >
+                      {loadingStartupId === startup.id.toString() ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                      ) : (
+                        <>
+                          <MaterialIcons name="email" size={20} color="#FFFFFF" />
+                          <Text style={styles.contactButtonText}>Contact Startup</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             ))
@@ -461,5 +480,25 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  contactedButton: {
+    flexDirection: 'row',
+    backgroundColor: '#4CAF50',
+    padding: 15,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  contactedButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+    marginLeft: 10,
   },
 });

@@ -98,7 +98,6 @@ export default function SavedStartups() {
       const saved = await AsyncStorage.getItem('savedStartups');
       const updated = saved ? JSON.parse(saved).filter((s: Startup) => s.id !== startupId) : [];
       await AsyncStorage.setItem('savedStartups', JSON.stringify(updated));
-      setSavedStartups(updated);
 
       // Decrement saved startups count
       const savedCountStr = await AsyncStorage.getItem('startupsSavedCount');
@@ -108,6 +107,15 @@ export default function SavedStartups() {
           await AsyncStorage.setItem('startupsSavedCount', (savedCount - 1).toString());
         }
       }
+
+      // Re-check contacted status for all remaining saved startups
+      const contacted = await AsyncStorage.getItem('contactedStartups');
+      const contactedList = contacted ? JSON.parse(contacted) : [];
+      const updatedWithContacted = updated.map((startup: Startup) => ({
+        ...startup,
+        isContacted: contactedList.some((c: Startup) => c.id === startup.id)
+      }));
+      setSavedStartups(updatedWithContacted);
 
       Alert.alert('Removed', 'Startup has been removed from your saved list!');
     } catch (error) {
@@ -244,12 +252,6 @@ export default function SavedStartups() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
         <Text style={styles.title}>Saved Startups</Text>
       </View>
 
@@ -297,8 +299,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212' },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
+    paddingTop: 30,
+    paddingBottom: 10,
   },
   startupCard: {
     backgroundColor: '#1E1E1E',
@@ -372,11 +374,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginTop: 100,
-    marginLeft: 20,
+    marginTop: 30,
+    marginLeft: 10,
   },
   listContent: {
     paddingBottom: 20,

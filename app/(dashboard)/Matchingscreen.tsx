@@ -107,6 +107,7 @@ export default function Matchingscreen() {
   const insets = useSafeAreaInsets();
   const [showGuidance, setShowGuidance] = useState(false);
   const [metricsData, setMetricsData] = useState<MetricsData | null>(null);
+  const [metricsFallback, setMetricsFallback] = useState(false);
 
   useEffect(() => {
     const initialize = async () => {
@@ -329,6 +330,12 @@ export default function Matchingscreen() {
 
   const fetchMetricsData = async (startupId: string) => {
     try {
+      // Check if metrics are already saved for this startup
+      const savedMetrics = await AsyncStorage.getItem(`startupMetrics_${startupId}`);
+      if (savedMetrics) {
+        return JSON.parse(savedMetrics);
+      }
+
       const token = await AsyncStorage.getItem('token');
       const response = await fetch(`${API_IP}/api/startup-metrics/${startupId}`, {
         headers: {
@@ -337,16 +344,25 @@ export default function Matchingscreen() {
         },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch metrics');
+      let metrics;
+      if (response.ok) {
+        metrics = await response.json();
+      } else {
+        metrics = generateMetricsData();
       }
 
-      const data = await response.json();
-      return data;
+      // Save metrics for this startup for future use
+      await AsyncStorage.setItem(`startupMetrics_${startupId}`, JSON.stringify(metrics));
+      return metrics;
     } catch (error) {
-      console.error('Error fetching metrics:', error);
-      // Fallback to generated metrics if API fails
-      return generateMetricsData();
+      // On error, try to load from storage or generate and save fallback
+      const savedMetrics = await AsyncStorage.getItem(`startupMetrics_${startupId}`);
+      if (savedMetrics) {
+        return JSON.parse(savedMetrics);
+      }
+      const fallback = generateMetricsData();
+      await AsyncStorage.setItem(`startupMetrics_${startupId}`, JSON.stringify(fallback));
+      return fallback;
     }
   };
 
@@ -364,13 +380,9 @@ export default function Matchingscreen() {
     setIsMetricsLoading(true);
     setSelectedStartup(startup);
     setShowMetricsModal(true);
-    
     try {
       const metrics = await fetchMetricsData(startup.id);
       setMetricsData(metrics);
-    } catch (error) {
-      console.error('Error loading metrics:', error);
-      Alert.alert('Error', 'Failed to load metrics. Please try again.');
     } finally {
       setIsMetricsLoading(false);
     }
@@ -476,7 +488,6 @@ export default function Matchingscreen() {
               <>
                 <Text style={styles.metricsTitle}>Startup Analysis</Text>
                 <Text style={styles.startupName}>{selectedStartup?.name}</Text>
-                
                 <View style={styles.metricsGrid}>
                   <View style={styles.metricItem}>
                     <Text style={styles.metricValue}>{metricsData.successProbability}%</Text>

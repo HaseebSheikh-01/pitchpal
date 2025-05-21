@@ -108,13 +108,7 @@ export default function RejectedStartups() {
 
         Alert.alert(
           'Success',
-          'Startup has been restored to your matching feed',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.push('/(dashboard)/Matchingscreen')
-            }
-          ]
+          'Startup has been restored to your matching feed'
         );
       }
     } catch (error) {
@@ -154,12 +148,6 @@ export default function RejectedStartups() {
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
         <Text style={styles.title}>Rejected Startups</Text>
       </View>
 
@@ -195,20 +183,15 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#2C2C2C',
-  },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    color: '#1DB954',
-    fontSize: 16,
-    fontWeight: '600',
+    paddingTop: 30,
+    paddingBottom: 10,
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginLeft: 16,
+    fontSize: 32,
+    fontWeight: '700',
+    marginTop: 30,
+    marginLeft: 10,
   },
   listContainer: {
     padding: 16,
